@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+
+{% extends 'core/base.html' %} {% block content %} {% load static %}
+
+<html>
+
+<head>
+  <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway" />
+  
+  <style>
+    p1,
+    p2 {
+      font-size: 2em;
+      padding: 100px;
+      text-shadow: none;
+    }
+
+    p1 {
+      margin-left: 50px;
+      color: #2d3142;
+    }
+
+    p2 {
+      color: #4f5d75;
+      margin-left: 112px;
+    }
+
+    p3 {
+      color: #4f5d75;
+      font-size: 2em;
+    }
+    .weather-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .forecast-card {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      background-color: var(--card-bg);
+      color: var(--text-primary);
+    }
+
+    .weather-icon-container {
+      font-size: 3em;
+      padding: 16px;
+      text-align: center;
+      background-color: transparent;
+    }
+
+    .weather-icon-container span {
+      position: relative;
+      display: inline-block;
+      filter: drop-shadow(-2px 0px 2px rgba(0, 0, 0, 0.1));
+    }
+
+    .weather-icon-container span:last-child {
+      margin-right: 0;
+    }
+
+    .weather-icon-container span:not(:last-child) {
+      margin-right: -8px;
+    }
+
+    {% comment %} /* Temperature Toggle Styles */ {% endcomment %}
+    .minimal-toggle {
+      display: inline-flex;
+      gap: 4px;
+      background: #f3f4f6;
+      padding: 4px;
+      border-radius: 8px;
+      margin-left: 10px;
+    }
+
+    .minimal-toggle button {
+      padding: 8px 16px;
+      background: transparent;
+      color: #6b7280;
+      border-radius: 6px;
+      font-size: 0.9em;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .minimal-toggle button.active {
+      background: white;
+      color: #667eea;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .minimal-toggle button:hover {
+      color: #667eea;
+    }
+    .desc {
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+    [data-theme="dark"] .desc {
+      color: #f3f4f6;
+    }
+  </style>
+</head>
+
+<body>
+  <br /><br />
+
+  <div class="main-container">
+    <form method="post" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+      {% csrf_token %}
+      <input type="text" name="address" placeholder="Enter ZIP Code or City&State" />
+      <input type="hidden" name="unit" id="unit-input" value="{{ unit|default:'F' }}" />
+      <button type="submit">Check Weather</button>
+      
+      <div class="minimal-toggle">
+        <button type="button" class="temp-toggle {% if unit == 'F' or not unit %}active{% endif %}" data-unit="F">°F</button>
+        <button type="button" class="temp-toggle {% if unit == 'C' %}active{% endif %}" data-unit="C">°C</button>
+      </div>
+    </form>
+    <br />
+
+    {% if error_message %}
+      <div style="max-width: 600px; margin: 40px auto; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        {% if error_type == 'international' %}
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;
+        {% else %}
+          background: #fff3cd; color: #856404; border: 2px solid #ffc107;
+        {% endif %}">
+        
+        {% if error_type == 'international' %}
+          <div style="font-size: 4em; margin-bottom: 10px;">🌍</div>
+          <h2 style="margin-top: 0; font-size: 1.8em;">International Weather Coming Soon!</h2>
+          <p style="font-size: 1.1em; line-height: 1.6; margin: 20px 0;">
+            {{ error_message }}
+          </p>
+          <p style="font-size: 0.95em; margin-top: 20px; opacity: 0.9;">
+            We're currently focused on USA locations using NOAA data. International coverage is on our roadmap!
+          </p>
+        {% else %}
+          <div style="font-size: 3em; margin-bottom: 10px;">⚠️</div>
+          <h2 style="margin-top: 0; font-size: 1.5em; color: #856404;">Oops!</h2>
+          <p style="font-size: 1.1em;">{{ error_message }}</p>
+          <p style="font-size: 0.9em; margin-top: 15px; color: #666;">
+            Try entering a US ZIP code (like 00001) or City, State (like Honolulu, HI).
+          </p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    {% if forecasts %}
+
+    {% comment %} <p3>Closest Weather Station: {{current.station_full_name}}</p3> {% endcomment %}
+    <p style="text-align: center; color: #6b7280; font-size: 0.95em; margin: 24px 0;">
+      Closest Weather Station: {{current.station_full_name}}
+    </p>
+    <div class="weather-grid">
+      
+      {% with period=forecasts.0 %}
+        <div class="forecast-card current-hightlight">
+          <h3>{% if current.temp %}Current Conditions{% else %}{{ period.name }}{% endif %}</h3>
+
+          <div class="weather-icon-container">
+            {% with desc=current.description|default:period.shortForecast %}
+              {% if "Sunny" in desc or "Clear" in desc and "Cloud" not in desc %}
+                {% if current.is_night %}
+                  <span>{{ current.moon_emoji }}</span>
+                {% else %}
+                  <span>☀️</span>
+                {% endif %}
+              {% endif %}
+              {% if "Cloud" in desc and "Rain" not in desc and "Storm" not in desc %}<span>☁️</span>{% endif %}
+              {% if "Rain" in desc or "Drizzle" in desc or "Shower" in desc %}<span>🌧️</span>{% endif %}
+              {% if "Snow" in desc %}<span>❄️</span>{% endif %}
+              {% if "Thunder" in desc or "Storm" in desc %}<span>⛈️</span>{% endif %}
+              {% if "Fog" in desc or "Haze" in desc %}<span>🌫️</span>{% endif %}
+              {% if "Wind" in desc or "Breezy" in desc %}<span>💨</span>{% endif %}
+            {% endwith %}
+          </div>
+
+          <p style="font-size: 1.5em; margin: 0">
+            {% if current.temp %}
+              <span data-temp="{{ current.temp }}">{{ current.temp }}°</span>
+            {% else %}
+              <span data-temp="{{ period.temperature }}">{{ period.temperature }}°</span>
+            {% endif %}
+          </p>
+          
+          <p class="desc">
+            {% if current.description %}
+              {{ current.description }}
+            {% else %}
+              {{ period.shortForecast }}
+            {% endif %}
+          </p>
+
+          <div style="display: flex; align-items: center; justify-content: center; gap: 5px; color: #d32f2f; margin-top: 10px;">
+            {% if current.wind_speed_mph and current.wind_speed_mph > 0 %}
+              <span style="font-size: 2em; line-height: 1;">💨</span>
+              <span style="font-size: 0.8em;">
+                {{ current.wind_speed_mph }} {{ current.wind_label}} {{ current.current_wind_direction }}
+              </span>
+            {% elif "mph" in period.windSpeed and period.windSpeed != "0 mph" %}
+              <span style="font-size: 2em; line-height: 1;">💨</span>
+              <span style="font-size: 0.8em;">
+                {{ period.windSpeed }} {{ period.windDirection }}
+              </span>
+            {% else %}
+              <span style="font-size: 0.8em;">No wind</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endwith %}
+
+            {% comment %} warnings and watches {% endcomment %}
+            {% if current.active_alerts %}
+              <div class="alert-container" style="background-color: #fff3f3; border: 2px solid #d32f2f; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <h3 style="color: #d32f2f; margin-top: 0;">⚠️ Active Weather Alerts</h3>
+                {% for alert in current.active_alerts %}
+                  <div class="alert-item" style="margin-bottom: 15px; border-bottom: 1px solid #ffcdd2; padding-bottom: 10px;">
+                    <strong style="font-size: 1.1em;">{{ alert.event }}</strong>
+                    <span style="font-size: 0.8em; padding: 2px 5px; border-radius: 4px; background: #d32f2f; color: white; margin-left: 10px;">
+                        {{ alert.severity }}
+                    </span>
+                    <p style="margin: 5px 0; font-weight: bold;">{{ alert.headline }}</p>
+                    <p style="font-size: 0.9em; color: #555;">{{ alert.instruction }}</p>
+                  </div>
+                {% endfor %}
+              </div>
+          {% endif %}
+
+            {% comment %} moon {% endcomment %}
+            <div class="forecast-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; border: none;">
+            <h4 style="color: #ffffff; opacity: 0.9;">{{ current.moon_name }}</h4>
+
+            <div style="font-family:'Noto Color Emoji', sans-serif; font-size: 3em; margin: 10px 0;">{{ current.moon_emoji }}</div>
+            <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 10px 0;"></div>
+            <br>
+            <p style="font-weight: bold; color: #ffffff;">Sunrise & Sunset</p>
+            
+            <div style="display: flex; justify-content: center; margin-top: 1px; font-size: 0.85em; color: #ffffff;">
+              <span>{{ current.sunrise }}</span>
+                &nbsp;
+                &amp;
+                &nbsp;
+              <span>{{ current.sunset }}</span>
+            </div>
+          </div>
+
+
+        {% for period in forecasts %}
+
+
+          <div class="forecast-card">
+            <h3>{{ period.name }}</h3>
+
+            <div class="weather-icon-container">
+              {% with forecast=period.shortForecast|lower %}
+                {% comment %} NIGHT ONLY {% endcomment %}
+                {% if not period.isDaytime %}
+                  {% if "rain" in forecast or "drizzle" in forecast %}<span>🌧️</span>
+                  {% elif "partly sunny" in forecast or "mostly cloudy" in forecast or "partly cloudy" in forecast or "mostly sunny" in forecast %}
+                    <span>☁️</span>
+                  {% else %}
+                    <span>⭐</span>
+                  {% endif %}
+                {% endif %}
+
+              {% comment %} DAY OR NIGHT {% endcomment %}
+              {% if "thunderstorm" in forecast %}<span>⛈️</span>{% endif %}
+              {% if "snow" in forecast %}<span>❄️</span>{% endif %}
+              {% if "sleet" in forecast or "hail" in forecast%}<span>🌨️</span>{% endif %}
+              {% if "windy" in forecast or "breezy" in forecast %}<span>💨</span>{% endif %}
+
+              {% comment %} DAY ONLY {% endcomment %}
+              {% if period.isDaytime %}
+                {% if "rain" in forecast and "heavy" not in forecast and "light" not in forecast %}<span>🌧️</span>{% endif %}
+                {% if "light rain" in forecast or "drizzle" in forecast %}<span>🌦️</span>{% endif %}
+                {% if "sunny" in forecast and "partly" not in forecast and "mostly" not in forecast %}<span>☀️</span>{% endif %}
+                {% if "clear" in forecast %}<span>☀️</span>{% endif %}
+                {% if "partly sunny" in forecast or "mostly cloudy" in forecast %}<span>⛅</span>{% endif %}
+                {% if "partly cloudy" in forecast or "mostly sunny" in forecast %}<span>🌤️</span>{% endif %}
+              {% endif %}
+
+              {% comment %} COVERED SKIES{% endcomment %}
+              {% if "cloudy" in forecast and "partly" not in forecast and "mostly" not in forecast or "overcast" in forecast %}<span>☁️</span>{% endif %}
+              {% if "fog" in forecast or "haze" in forecast %}<span>🌫️</span>{% endif %}
+            {% endwith %}
+            </div>
+
+            <p style="font-size: 1.5em; margin: 0">
+            <span data-temp="{{ period.temperature }}">{{ period.temperature }}°</span>
+            {% if period.isDaytime %}
+              <span style="font-size: 0.7em; font-family: 'Noto Color Emoji', sans-serif;">⬆️</span>
+            {% else %}
+              <span style="font-size: 0.7em; font-family: 'Noto Color Emoji', sans-serif;">⬇️</span>
+            {% endif %}
+            </p>
+            
+            <p class="desc" style="font-size: 0.9em; margin: 5px 0;">
+              {{ period.shortForecast }}
+            </p>
+
+
+            {% if "mph" in period.windSpeed and period.windSpeed != "0 mph" %}
+              <div style="display: flex; align-items: center; justify-content: center; gap: 5px; color: #d32f2f; margin-top: 10px;">
+                <span style="font-size: 2em; line-height: 1;">💨</span>
+                <span style="font-size: 0.8em;">
+                {{ period.windSpeed }} {{ period.windDirection }}
+                </span>
+              </div>
+            {% else %}
+              No wind
+            {% endif %}
+
+          </div>
+
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <script>
+      // Handle temperature toggle clicks
+      document.querySelectorAll('.temp-toggle').forEach(button => {
+        button.addEventListener('click', function() {
+          const newUnit = this.dataset.unit;
+          const currentUnit = document.querySelector('.temp-toggle.active').dataset.unit;
+          
+          // Don't do anything if clicking the same unit
+          if (newUnit === currentUnit) return;
+          
+          // Remove active class from all buttons
+          document.querySelectorAll('.temp-toggle').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          
+          // Add active class to clicked button
+          this.classList.add('active');
+          
+          // Update hidden input
+          document.getElementById('unit-input').value = newUnit;
+          
+          // Convert all temperatures on the page
+          document.querySelectorAll('[data-temp]').forEach(tempElement => {
+            let temp = parseFloat(tempElement.dataset.temp);
+            
+            if (newUnit === 'C') {
+              // Convert F to C
+              temp = Math.round((temp - 32) * 5 / 9);
+            } else {
+              // Convert C to F
+              temp = Math.round((temp * 9 / 5) + 32);
+            }
+            
+            // Update display
+            tempElement.textContent = temp + '°';
+            // Update stored value for next conversion
+            tempElement.dataset.temp = temp;
+          });
+        });
+      });
+    </script>
+    
+
+</body>
+
+</html>
+
+{% endblock %}

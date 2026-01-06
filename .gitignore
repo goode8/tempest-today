@@ -1,0 +1,91 @@
+.DS_Store
+env/
+# Old/backup files
+
+mysite/core/templates/core/junk*.html
+mysite/core/templates/core/junk*.json
+*.txt
+
+mysite/core/utilsv1.py
+mysite/core/viewsv0.1.py
+mysite/core/viewsv0.py
+mysite/core/viewsv1.1.py
+mysite/core/oldviews.txt
+mysite/core/templates/core/indexv0.html
+mysite/core/templates/core/indexv1.1.html
+mysite/core/templates/core/decindex.html
+mysite/core/templates/core/diary.txt
+mysite/core/templates/core/funfact.txt
+mysite/core/templates/core/junk.html
+mysite/core/templates/core/junk2.json
+mysite/core/templates/core/junk3.html
+mysite/core/templates/core/test22.html
+
+# Migrations
+*/migrations/*
+!*/migrations/__init__.py
+
+# Python
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env
+env/
+venv/
+ENV/
+/env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/static/
+/media/
+/staticfiles/
+staticfiles/
+
+# Environment variables
+.env
+.env.local
+# Virtual Environment
+env/
+venv/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PythonAnywhere specific
+.pythonanywhere//staticfiles/
+
+# Migrations
+*/migrations/*
+!*/migrations/__init__.py
