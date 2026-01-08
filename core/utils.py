@@ -26,47 +26,47 @@ def fahrenheit_to_celsius(temp_f):
 def convert_temperature(temp, from_unit='F', to_unit='F'):
     """
     Convert temperature between F and C
-    
+
     Args:
         temp: Temperature value (can be int, float, or string)
         from_unit: Original unit ('F' or 'C')
         to_unit: Target unit ('F' or 'C')
-    
+
     Returns: Converted temperature
     """
     if temp == "N/A" or temp is None:
         return "N/A"
-    
+
     # If units are the same, no conversion needed
     if from_unit == to_unit:
         return temp
-    
+
     # Convert to int if it's a string number
     try:
         temp = float(temp)
     except (ValueError, TypeError):
         return "N/A"
-    
+
     # Convert F to C
     if from_unit == 'F' and to_unit == 'C':
         return round((temp - 32) * 5 / 9)
-    
+
     # Convert C to F
     if from_unit == 'C' and to_unit == 'F':
         return round((temp * 9 / 5) + 32)
-    
+
     return temp
 
 
 def convert_wind_speed(raw_value, unit_code):
     """
     Convert wind speed from various units to MPH
-    
+
     Returns: tuple (speed_mph, label)
     """
     if raw_value is None:
         return "", "no wind data available"
-    
+
     # NWS uses WMO unit codes
     if "m_s" in unit_code:
         # Meters per second to MPH
@@ -85,7 +85,7 @@ def degrees_to_cardinal(degrees):
     """Convert wind direction in degrees to cardinal direction"""
     if degrees is None:
         return ""
-    
+
     directions = [
         'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
         'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
@@ -97,7 +97,7 @@ def degrees_to_cardinal(degrees):
 def get_moon_details(moon_phase):
     """
     Map the 0-28 moon phase number to a name and emoji
-    
+
     Returns: tuple (name, emoji)
     """
     if moon_phase < 1.84:
@@ -121,36 +121,36 @@ def get_moon_details(moon_phase):
 def get_astronomy_data(lat, lon):
     """
     Calculate sunrise, sunset, moonrise, moonset, and moon phase
-    
+
     Returns: dict with astronomy data including raw datetime objects
     """
     # Find timezone for the location
     tf = TimezoneFinder()
     tz_name = tf.timezone_at(lng=lon, lat=lat)
     local_tz = pytz.timezone(tz_name)
-    
+
     # Create location for Astral
     city = LocationInfo("", "", tz_name, lat, lon)
-    
+
     # Sun calculations
     sun_data = sun(city.observer, date=date.today(), tzinfo=local_tz)
     sunrise_str = sun_data['sunrise'].strftime('%-I:%M %p')
     sunset_str = sun_data['sunset'].strftime('%-I:%M %p')
-    
+
     # Moon phase
     moon_phase = phase(date.today())
     moon_name, moon_emoji = get_moon_details(moon_phase)
-    
+
     # Moon rise/set
     try:
         m_rise = moonrise(city.observer, date=date.today(), tzinfo=local_tz)
         m_set = moonset(city.observer, date=date.today(), tzinfo=local_tz)
-        
+
         moonrise_str = m_rise.strftime('%-I:%M %p') if m_rise else "No rise today"
         moonset_str = m_set.strftime('%-I:%M %p') if m_set else "No set today"
     except ValueError:
         moonrise_str, moonset_str = "N/A", "N/A"
-    
+
     return {
         "sunrise": sunrise_str,
         "sunset": sunset_str,
