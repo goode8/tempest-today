@@ -4,7 +4,6 @@ env/
 
 mysite/core/templates/core/junk*.html
 mysite/core/templates/core/junk*.json
-*.txt
 
 mysite/core/utilsv1.py
 mysite/core/viewsv0.1.py
