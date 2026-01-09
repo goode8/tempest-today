@@ -1,24 +1,7 @@
 .DS_Store
 env/
 # Old/backup files
-
-mysite/core/templates/core/junk*.html
-mysite/core/templates/core/junk*.json
-
-mysite/core/utilsv1.py
-mysite/core/viewsv0.1.py
-mysite/core/viewsv0.py
-mysite/core/viewsv1.1.py
-mysite/core/oldviews.txt
-mysite/core/templates/core/indexv0.html
-mysite/core/templates/core/indexv1.1.html
-mysite/core/templates/core/decindex.html
-mysite/core/templates/core/diary.txt
-mysite/core/templates/core/funfact.txt
-mysite/core/templates/core/junk.html
-mysite/core/templates/core/junk2.json
-mysite/core/templates/core/junk3.html
-mysite/core/templates/core/test22.html
+old-versions/
 
 # Migrations
 */migrations/*
@@ -57,7 +40,7 @@ wheels/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-/static/
+# /static/
 /media/
 /staticfiles/
 staticfiles/
