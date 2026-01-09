@@ -10,7 +10,7 @@ class WeatherService:
     """Handles all National Weather Service API interactions"""
     
     def __init__(self):
-        self.headers = {"User-Agent": "my_weather_app (contact@example.com)"}
+        self.headers = {"User-Agent": "tempesttoday.pythonanywhere.com (tempesttoday@gmail.com)"}
         self.base_url = "https://api.weather.gov"
     
     def get_location_coordinates(self, address, timeout=10):
