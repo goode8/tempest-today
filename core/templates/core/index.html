@@ -68,7 +68,6 @@
       margin-right: -8px;
     }
 
-    {% comment %} /* Temperature Toggle Styles */ {% endcomment %}
     .minimal-toggle {
       display: inline-flex;
       gap: 4px;
@@ -98,13 +97,39 @@
     .minimal-toggle button:hover {
       color: #667eea;
     }
+
     .desc {
       color: var(--text-secondary);
       font-weight: 400;
     }
+
     [data-theme="dark"] .desc {
       color: #f3f4f6;
     }
+
+    button[type="submit"] {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      font-size: 1em;
+      box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.3);
+    }
+
+    button[type="submit"]:hover {
+      background: #5568d3;
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    button[type="submit"]:active {
+      transform: scale(0.95);
+    }
+
   </style>
 </head>
 
@@ -185,9 +210,9 @@
 
           <p style="font-size: 1.5em; margin: 0">
             {% if current.temp %}
-              <span data-temp="{{ current.temp }}">{{ current.temp }}°</span>
+              <span data-temp="{{ current.temp }}">{{ current.temp }}° <span class="temp-unit">{{ unit|default:'F' }}</span></span>
             {% else %}
-              <span data-temp="{{ period.temperature }}">{{ period.temperature }}°</span>
+              <span data-temp="{{ period.temperature }}">{{ period.temperature }}° <span class="temp-unit">{{ unit|default:'F' }}</span></span>
             {% endif %}
           </p>
           
@@ -358,10 +383,19 @@
               temp = Math.round((temp * 9 / 5) + 32);
             }
             
-            // Update display
-            tempElement.textContent = temp + '°';
-            // Update stored value for next conversion
-            tempElement.dataset.temp = temp;
+              // Check if this element has a temp-unit span (current conditions only)
+              const unitSpan = tempElement.querySelector('.temp-unit');
+              if (unitSpan) {
+                // Update display with unit
+                tempElement.innerHTML = temp + '° <span class="temp-unit">' + newUnit + '</span>';
+              } else {
+                // Update display without unit (forecast cards)
+                tempElement.textContent = temp + '° ';
+              }
+              
+              // Update stored value for next conversion
+              tempElement.dataset.temp = temp;
+            
           });
         });
       });
