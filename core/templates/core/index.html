@@ -129,6 +129,52 @@
     button[type="submit"]:active {
       transform: scale(0.95);
     }
+    @media (max-width: 768px) {
+      form {
+        flex-direction: column !important;
+        gap: 12px !important;
+      }
+      
+        input[type="text"] {
+          width: 100% !important;
+          max-width: 400px;
+          padding: 12px;
+          font-size: 16px; /* Prevents zoom on iOS */
+        }
+        
+        button[type="submit"] {
+          width: 100%;
+          max-width: 400px;
+        }
+        
+        .minimal-toggle {
+          margin-left: 0 !important;
+        }
+        
+        .weather-grid {
+          grid-template-columns: 1fr !important;
+          gap: 12px;
+        }
+        
+        .weather-icon-container {
+          font-size: 2.5em;
+          padding: 12px;
+        }
+        
+        .forecast-card {
+          padding: 20px 16px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .weather-icon-container {
+          font-size: 2em;
+        }
+        
+        .forecast-card h3 {
+          font-size: 1.1em;
+        }
+      }
 
   </style>
 </head>
