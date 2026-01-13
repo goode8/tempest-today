@@ -31,7 +31,8 @@ def index(request):
     # Step 1: Get coordinates from address
     try:
         lat, lon, location = weather_service.get_location_coordinates(address)
-        
+        # lat, lon, location = weather_service.get_location_coordinates(address)
+
         if not location:
             return render(request, "core/index.html", {
                 "error_message": "Location not found. Please check and try again.",
@@ -104,9 +105,33 @@ def index(request):
     except:
         current_weather['is_night'] = False
     
+    # Step 5c: Create moon visibility message based on position and weather
+    # moon_visible = current_weather.get('moon_visible', False)
+    description = current_weather.get('description') or ''
+    description = description.lower() if description else ''
+    
+    # if moon_visible:
+    #     # Moon is up - check weather conditions
+    #     if any(word in description for word in ['cloud', 'overcast', 'fog', 'haze']):
+    #         visibility_msg = "Moon is up but may be obscured by clouds"
+    #     elif any(word in description for word in ['rain', 'storm', 'drizzle', 'snow']):
+    #         visibility_msg = "Moon is up but hidden by precipitation"
+    #     else:
+    #         visibility_msg = "Moon should be visible"
+    # else:
+    #     visibility_msg = "Moon is not up right now"
+    
+    # current_weather['moon_visibility_msg'] = visibility_msg
+    
     # Step 6: Get active alerts
     active_alerts = weather_service.get_active_alerts(lat, lon)
     current_weather["active_alerts"] = active_alerts
+    
+    # Step 7: Add detailed forecast from first period
+    if forecasts and len(forecasts) > 0:
+        current_weather["detailed_forecast"] = forecasts[0].get("detailedForecast", "")
+    else:
+        current_weather["detailed_forecast"] = ""
     
     return render(
         request,
@@ -145,7 +170,14 @@ def get_current_weather(weather_service, metadata, unit='F'):
             "station_full_name": station_name,
             "wind_speed_mph": None,
             "wind_label": None,
-            "current_wind_direction": None
+            "current_wind_direction": None,
+            "humidity": None,
+            "heat_index": None,
+            "wind_chill": None,
+            "max_temp_24h": None,
+            "min_temp_24h": None,
+            "precip_1h": None,
+            "precip_1h_mm": None,
         }
     
     # Get observations from station
@@ -180,7 +212,75 @@ def get_current_weather(weather_service, metadata, unit='F'):
     wind_direction_deg = obs.get("windDirection", {}).get("value")
     wind_direction = degrees_to_cardinal(wind_direction_deg)
     
-    # Build current weather dict - None values will be filled from forecast
+    # === NEW MODAL FIELDS ===
+    
+    # Humidity
+    humidity = obs.get("relativeHumidity", {}).get("value")
+    if humidity is not None:
+        try:
+            humidity = round(humidity)
+        except (TypeError, ValueError):
+            humidity = None
+    
+    # Heat Index and Wind Chill (feels like temps)
+    heat_index_c = obs.get("heatIndex", {}).get("value")
+    wind_chill_c = obs.get("windChill", {}).get("value")
+    
+    heat_index_display = None
+    wind_chill_display = None
+    
+    if heat_index_c is not None:
+        try:
+            heat_index_f = celsius_to_fahrenheit(heat_index_c)
+            if heat_index_f != "N/A":
+                heat_index_display = round(heat_index_f) if unit == 'F' else round(heat_index_c)
+        except (TypeError, ValueError):
+            pass
+    
+    if wind_chill_c is not None:
+        try:
+            wind_chill_f = celsius_to_fahrenheit(wind_chill_c)
+            if wind_chill_f != "N/A":
+                wind_chill_display = round(wind_chill_f) if unit == 'F' else round(wind_chill_c)
+        except (TypeError, ValueError):
+            pass
+    
+    # 24-hour high/low temps
+    max_temp_24h = None
+    min_temp_24h = None
+    
+    max_temp_24h_c = obs.get("maxTemperatureLast24Hours", {}).get("value")
+    min_temp_24h_c = obs.get("minTemperatureLast24Hours", {}).get("value")
+    
+    if max_temp_24h_c is not None:
+        try:
+            max_temp_24h_f = celsius_to_fahrenheit(max_temp_24h_c)
+            if max_temp_24h_f != "N/A":
+                max_temp_24h = round(max_temp_24h_f) if unit == 'F' else round(max_temp_24h_c)
+        except (TypeError, ValueError):
+            pass
+    
+    if min_temp_24h_c is not None:
+        try:
+            min_temp_24h_f = celsius_to_fahrenheit(min_temp_24h_c)
+            if min_temp_24h_f != "N/A":
+                min_temp_24h = round(min_temp_24h_f) if unit == 'F' else round(min_temp_24h_c)
+        except (TypeError, ValueError):
+            pass
+    
+    # Precipitation
+    precip_1h_inches = None
+    precip_1h_mm = obs.get("precipitationLastHour", {}).get("value")
+    
+    if precip_1h_mm is not None:
+        try:
+            # Convert mm to inches
+            precip_1h_inches = round(precip_1h_mm / 25.4, 2) if precip_1h_mm > 0 else 0
+        except (TypeError, ValueError):
+            precip_1h_inches = None
+            precip_1h_mm = None
+    
+    # Build current weather dict
     return {
         "temp": temp_display,
         "description": description,
@@ -189,6 +289,14 @@ def get_current_weather(weather_service, metadata, unit='F'):
         "wind_speed_mph": wind_speed_mph if wind_speed_mph else None,
         "wind_label": wind_label if wind_label and wind_label != "no wind data available" else None,
         "current_wind_direction": wind_direction if wind_direction else None,
+        # Modal fields
+        "humidity": humidity,
+        "heat_index": heat_index_display,
+        "wind_chill": wind_chill_display,
+        "max_temp_24h": max_temp_24h,
+        "min_temp_24h": min_temp_24h,
+        "precip_1h": precip_1h_inches,
+        "precip_1h_mm": precip_1h_mm,
     }
 
 

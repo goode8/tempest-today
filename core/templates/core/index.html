@@ -174,7 +174,145 @@
         .forecast-card h3 {
           font-size: 1.1em;
         }
+        
+        /* Remove extra spacing on mobile */
+        form + br {
+          display: none;
+        }
       }
+
+    /* Modal styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 9999;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: var(--bg-primary);
+      border-radius: 12px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 2px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      background: var(--bg-primary);
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      font-size: 2em;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+      padding: 0;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      color: var(--text-primary);
+      transform: scale(1.1);
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .modal-section {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-section:last-child {
+      border-bottom: none;
+    }
+
+    .modal-section h4 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: var(--text-primary);
+      font-size: 1.2em;
+    }
+
+    .modal-data-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .modal-data-item {
+      background: var(--card-bg);
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .modal-data-label {
+      font-size: 0.85em;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+
+    .modal-data-value {
+      font-size: 1.3em;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .clickable-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .clickable-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    @media (max-width: 768px) {
+      .modal-content {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+      }
+      
+      .modal-overlay {
+        padding: 0;
+      }
+      
+      .modal-data-grid {
+        grid-template-columns: 1fr;
+      }
+    }
 
   </style>
 </head>
@@ -233,7 +371,7 @@
     <div class="weather-grid">
       
       {% with period=forecasts.0 %}
-        <div class="forecast-card current-hightlight">
+        <div class="forecast-card current-hightlight clickable-card" onclick="openCurrentWeatherModal()" style="cursor: pointer;">
           <h3>{% if current.temp %}Current Conditions{% else %}{{ period.name }}{% endif %}</h3>
 
           <div class="weather-icon-container">
@@ -255,10 +393,12 @@
           </div>
 
           <p style="font-size: 1.5em; margin: 0">
-            {% if current.temp %}
+            {% if current.temp and current.temp != "N/A" %}
               <span data-temp="{{ current.temp }}">{{ current.temp }}° <span class="temp-unit">{{ unit|default:'F' }}</span></span>
-            {% else %}
+            {% elif period.temperature and period.temperature != "N/A" %}
               <span data-temp="{{ period.temperature }}">{{ period.temperature }}° <span class="temp-unit">{{ unit|default:'F' }}</span></span>
+            {% else %}
+              <span style="font-size: 0.9em; color: var(--text-secondary);">Temp unavailable</span>
             {% endif %}
           </p>
           
@@ -299,18 +439,20 @@
                         {{ alert.severity }}
                     </span>
                     <p style="margin: 5px 0; font-weight: bold; color: var(--text-primary);">{{ alert.headline }}</p>
-                    {% comment %} <p style="font-size: 0.9em; color: var(--text-secondary);">{{ alert.instruction }}</p> {% endcomment %}
+                    <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.description }}</p>
                     <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.instruction }}</p>
+                    <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.urgency }}</p>
                   </div>
                 {% endfor %}
               </div>
           {% endif %}
 
             {% comment %} moon {% endcomment %}
-            <div class="forecast-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; border: none;">
+            <div class="forecast-card clickable-card" onclick="openMoonModal()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; border: none; cursor: pointer;">
             <h4 style="color: #ffffff; opacity: 0.9;">{{ current.moon_name }}</h4>
 
             <div style="font-family:'Noto Color Emoji', sans-serif; font-size: 3em; margin: 10px 0;">{{ current.moon_emoji }}</div>
+            <p style="color: #ffffff; opacity: 0.85;">{{ current.moon_illumination }}% Illuminated</p>
             <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 10px 0;"></div>
             <br>
             <p style="font-weight: bold; color: #ffffff;">Sunrise & Sunset</p>
@@ -327,8 +469,19 @@
 
         {% for period in forecasts %}
 
-
-          <div class="forecast-card">
+          <div class="forecast-card clickable-card" 
+               onclick="openForecastModal(this)" 
+               style="cursor: pointer;"
+               data-period-name="{{ period.name }}"
+               data-period-temp="{{ period.temperature }}"
+               data-period-short="{{ period.shortForecast }}"
+               data-period-detailed="{{ period.detailedForecast|escapejs }}"
+               data-period-wind-speed="{{ period.windSpeed }}"
+               data-period-wind-dir="{{ period.windDirection }}"
+               data-period-precip="{% if period.probabilityOfPrecipitation.value %}{{ period.probabilityOfPrecipitation.value }}{% endif %}"
+               data-period-humidity="{% if period.relativeHumidity.value %}{{ period.relativeHumidity.value }}{% endif %}"
+               data-period-temp-trend="{{ period.temperatureTrend|default:'' }}"
+               data-period-is-day="{{ period.isDaytime }}">
             <h3>{{ period.name }}</h3>
 
             <div class="weather-icon-container">
@@ -366,11 +519,15 @@
             </div>
 
             <p style="font-size: 1.5em; margin: 0">
-            <span data-temp="{{ period.temperature }}">{{ period.temperature }}°</span>
-            {% if period.isDaytime %}
-              <span style="font-size: 0.7em; font-family: 'Noto Color Emoji', sans-serif;">⬆️</span>
+            {% if period.temperature != "N/A" and period.temperature %}
+              <span data-temp="{{ period.temperature }}">{{ period.temperature }}°</span>
+              {% if period.isDaytime %}
+                <span style="font-size: 0.7em; font-family: 'Noto Color Emoji', sans-serif;">⬆️</span>
+              {% else %}
+                <span style="font-size: 0.7em; font-family: 'Noto Color Emoji', sans-serif;">⬇️</span>
+              {% endif %}
             {% else %}
-              <span style="font-size: 0.7em; font-family: 'Noto Color Emoji', sans-serif;">⬇️</span>
+              <span style="font-size: 0.9em; color: var(--text-secondary);">Temp unavailable</span>
             {% endif %}
             </p>
             
@@ -393,10 +550,577 @@
           </div>
 
         {% endfor %}
+
+        {% comment %} Current Weather Modal - only render when forecasts exist {% endcomment %}
+        <div id="currentWeatherModal" class="modal-overlay" onclick="closeModal(event)">
+          <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+              <h2 style="margin: 0;">Current Conditions Details</h2>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="minimal-toggle" style="margin: 0;">
+                  <button type="button" class="modal-temp-toggle {% if unit == 'F' or not unit %}active{% endif %}" data-unit="F">°F</button>
+                  <button type="button" class="modal-temp-toggle {% if unit == 'C' %}active{% endif %}" data-unit="C">°C</button>
+                </div>
+                <button class="modal-close" onclick="closeCurrentWeatherModal()" aria-label="Close modal">×</button>
+              </div>
+            </div>
+            <div class="modal-body">
+              
+              {% comment %} Current Temp & Description {% endcomment %}
+              <div class="modal-section">
+                <div style="text-align: center;">
+                  <div class="weather-icon-container">
+                    {% with desc=current.description|default:forecasts.0.shortForecast %}
+                      {% if "Sunny" in desc or "Clear" in desc and "Cloud" not in desc %}
+                        <span>☀️</span>
+                      {% elif "Cloud" in desc and "Rain" not in desc and "Storm" not in desc %}
+                        <span>☁️</span>
+                      {% elif "Rain" in desc or "Drizzle" in desc or "Shower" in desc %}
+                        <span>🌧️</span>
+                      {% elif "Snow" in desc %}
+                        <span>❄️</span>
+                      {% elif "Thunder" in desc or "Storm" in desc %}
+                        <span>⛈️</span>
+                      {% elif "Fog" in desc or "Haze" in desc %}
+                        <span>🌫️</span>
+                      {% elif "Wind" in desc or "Breezy" in desc %}
+                        <span>💨</span>
+                      {% else %}
+                        <span>🌤️</span>
+                      {% endif %}
+                    {% endwith %}
+                  </div>
+                  <h3 style="font-size: 3em; margin: 10px 0;">
+                    <span class="modal-temp-display" data-temp="{% if current.temp %}{{ current.temp }}{% else %}{{ forecasts.0.temperature }}{% endif %}">
+                      {% if current.temp %}{{ current.temp }}{% else %}{{ forecasts.0.temperature }}{% endif %}°
+                    </span>
+                    <span class="modal-temp-unit" style="font-size: 0.5em;">{{ unit|default:'F' }}</span>
+                  </h3>
+                  <p style="font-size: 1.2em; color: var(--text-secondary); margin: 0;">
+                    {% if current.description %}{{ current.description }}{% else %}{{ forecasts.0.shortForecast }}{% endif %}
+                  </p>
+                </div>
+              </div>
+
+              {% comment %} Detailed Forecast {% endcomment %}
+              {% if current.detailed_forecast %}
+              <div class="modal-section">
+                <h4>Detailed Forecast</h4>
+                <p style="line-height: 1.6; color: var(--text-primary);">{{ current.detailed_forecast }}</p>
+              </div>
+              {% endif %}
+
+              {% comment %} Temperature Details - only show if we have data {% endcomment %}
+              {% if current.heat_index or current.wind_chill or current.max_temp_24h or current.min_temp_24h %}
+              <div class="modal-section">
+                <h4>Temperature</h4>
+                <div class="modal-data-grid">
+                  {% if current.heat_index %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Feels Like (Heat Index)</div>
+                    <div class="modal-data-value">
+                      <span class="modal-temp-display" data-temp="{{ current.heat_index }}">{{ current.heat_index }}°</span>
+                      <span class="modal-temp-unit">{{ unit|default:'F' }}</span>
+                    </div>
+                  </div>
+                  {% endif %}
+                  {% if current.wind_chill %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Feels Like (Wind Chill)</div>
+                    <div class="modal-data-value">
+                      <span class="modal-temp-display" data-temp="{{ current.wind_chill }}">{{ current.wind_chill }}°</span>
+                      <span class="modal-temp-unit">{{ unit|default:'F' }}</span>
+                    </div>
+                  </div>
+                  {% endif %}
+                  {% if current.max_temp_24h %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">24hr High</div>
+                    <div class="modal-data-value">
+                      <span class="modal-temp-display" data-temp="{{ current.max_temp_24h }}">{{ current.max_temp_24h }}°</span>
+                      <span class="modal-temp-unit">{{ unit|default:'F' }}</span>
+                    </div>
+                  </div>
+                  {% endif %}
+                  {% if current.min_temp_24h %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">24hr Low</div>
+                    <div class="modal-data-value">
+                      <span class="modal-temp-display" data-temp="{{ current.min_temp_24h }}">{{ current.min_temp_24h }}°</span>
+                      <span class="modal-temp-unit">{{ unit|default:'F' }}</span>
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endif %}
+
+              {% comment %} Other Conditions {% endcomment %}
+              <div class="modal-section">
+                <h4>Other Conditions</h4>
+                <div class="modal-data-grid">
+                  {% if current.humidity %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Humidity</div>
+                    <div class="modal-data-value">{{ current.humidity }}%</div>
+                  </div>
+                  {% endif %}
+                  
+                  {% comment %} Wind - show from current or fallback to forecast {% endcomment %}
+                  {% if current.wind_speed_mph is not None or forecasts.0.windSpeed %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Wind</div>
+                    <div class="modal-data-value">
+                      {% if current.wind_speed_mph is not None and current.wind_speed_mph > 0 %}
+                        {{ current.wind_speed_mph }} {{ current.wind_label }} {{ current.current_wind_direction }}
+                      {% elif forecasts.0.windSpeed and "mph" in forecasts.0.windSpeed %}
+                        {{ forecasts.0.windSpeed }} {{ forecasts.0.windDirection }}
+                      {% else %}
+                        Calm
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% endif %}
+                  
+                  {% if current.precip_1h is not None %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Precipitation (Last Hour)</div>
+                    <div class="modal-data-value">
+                      {% if current.precip_1h > 0 %}
+                        {{ current.precip_1h }}" / {{ current.precip_1h_mm|floatformat:1 }} mm
+                      {% else %}
+                        None
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              {% comment %} Station Info {% endcomment %}
+              {% if current.station_full_name %}
+              <div class="modal-section" style="border-bottom: none;">
+                <p style="font-size: 0.85em; color: var(--text-secondary); margin: 0; text-align: center;">
+                  Data from: {{ current.station_full_name }}
+                </p>
+              </div>
+              {% endif %}
+
+            </div>
+          </div>
+        </div>
+
+        {% comment %} Forecast Period Modal {% endcomment %}
+        <div id="forecastModal" class="modal-overlay" onclick="closeModal(event)">
+          <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+              <h2 id="forecastModalTitle" style="margin: 0;">Forecast Details</h2>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="minimal-toggle" style="margin: 0;">
+                  <button type="button" class="forecast-modal-temp-toggle {% if unit == 'F' or not unit %}active{% endif %}" data-unit="F">°F</button>
+                  <button type="button" class="forecast-modal-temp-toggle {% if unit == 'C' %}active{% endif %}" data-unit="C">°C</button>
+                </div>
+                <button class="modal-close" onclick="closeForecastModal()" aria-label="Close modal">×</button>
+              </div>
+            </div>
+            <div class="modal-body">
+              
+              {% comment %} Temperature & Icon {% endcomment %}
+              <div class="modal-section">
+                <div style="text-align: center;">
+                  <div id="forecastModalIcon" class="weather-icon-container"></div>
+                  <h3 style="font-size: 3em; margin: 10px 0;">
+                    <span id="forecastModalTemp" class="forecast-modal-temp-display" data-temp="">--°</span>
+                    <span id="forecastModalTempUnit" class="forecast-modal-temp-unit" style="font-size: 0.5em;">{{ unit|default:'F' }}</span>
+                    <span id="forecastModalTempTrend" style="font-size: 0.4em; color: var(--text-secondary);"></span>
+                  </h3>
+                  <p id="forecastModalShortForecast" style="font-size: 1.2em; color: var(--text-secondary); margin: 0;"></p>
+                </div>
+              </div>
+
+              {% comment %} Detailed Forecast {% endcomment %}
+              <div id="forecastModalDetailedSection" class="modal-section">
+                <h4>Forecast</h4>
+                <p id="forecastModalDetailed" style="line-height: 1.6; color: var(--text-primary);"></p>
+              </div>
+
+              {% comment %} Conditions {% endcomment %}
+              <div class="modal-section">
+                <h4>Conditions</h4>
+                <div class="modal-data-grid">
+                  <div id="forecastModalWindContainer" class="modal-data-item">
+                    <div class="modal-data-label">Wind</div>
+                    <div id="forecastModalWind" class="modal-data-value"></div>
+                  </div>
+                  
+                  <div id="forecastModalPrecipContainer" class="modal-data-item" style="display: none;">
+                    <div class="modal-data-label">Chance of Precipitation</div>
+                    <div id="forecastModalPrecip" class="modal-data-value"></div>
+                  </div>
+                  
+                  <div id="forecastModalHumidityContainer" class="modal-data-item" style="display: none;">
+                    <div class="modal-data-label">Humidity</div>
+                    <div id="forecastModalHumidity" class="modal-data-value"></div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {% comment %} Moon Modal {% endcomment %}
+        <div id="moonModal" class="modal-overlay" onclick="closeModal(event)">
+          <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+              <h2 style="margin: 0;">Moon Details</h2>
+              <button class="modal-close" onclick="closeMoonModal()" aria-label="Close modal">×</button>
+            </div>
+            <div class="modal-body">
+              
+              {% comment %} Moon Phase & Emoji {% endcomment %}
+              <div class="modal-section">
+                <div style="text-align: center;">
+                  <div style="font-family:'Noto Color Emoji', sans-serif; font-size: 5em; margin: 10px 0;">
+                    {{ current.moon_emoji }}
+                  </div>
+                  <h3 style="font-size: 2em; margin: 10px 0;">{{ current.moon_name }}</h3>
+                  <p style="font-size: 1.2em; color: var(--text-secondary); margin: 0;">
+                    {{ current.moon_illumination }}% Illuminated
+                  </p>
+                </div>
+              </div>
+
+              {% comment %} Moon Times - only show if data available 
+              {% if current.moonrise != "N/A" or current.moonset != "N/A" or current.moon_transit != "N/A" %}
+              <div class="modal-section">
+                <h4>Moon Times</h4>
+                <div class="modal-data-grid">
+                  {% if current.moonrise != "N/A" %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Moonrise</div>
+                    <div class="modal-data-value">{{ current.moonrise }}</div>
+                  </div>
+                  {% endif %}
+                  {% if current.moonset != "N/A" %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Moonset</div>
+                    <div class="modal-data-value">{{ current.moonset }}</div>
+                  </div>
+                  {% endif %}
+                  {% if current.moon_transit != "N/A" %}
+                  <div class="modal-data-item" style="grid-column: 1 / -1;">
+                    <div class="modal-data-label">Best Viewing Time</div>
+                    <div class="modal-data-value" style="font-size: 1.1em;">{{ current.moon_transit }}</div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endif %}
+              {% endcomment %}
+
+              {% comment %} Upcoming Moon Phases {% endcomment %}
+              <div class="modal-section">
+                <h4>Upcoming Phases</h4>
+                <div class="modal-data-grid">
+                  {% if current.next_full_moon != "N/A" %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Next Full Moon</div>
+                    <div class="modal-data-value">🌕 {{ current.next_full_moon }}</div>
+                  </div>
+                  {% endif %}
+                  {% if current.next_new_moon != "N/A" %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Next New Moon</div>
+                    <div class="modal-data-value">🌑 {{ current.next_new_moon }}</div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
       </div>
       {% endif %}
     </div>
     <script>
+      // Modal functions
+      function openCurrentWeatherModal() {
+        // Get current state from main page
+        const mainPageUnit = document.querySelector('.temp-toggle.active').dataset.unit;
+        const modalToggleButtons = document.querySelectorAll('.modal-temp-toggle');
+        
+        // Set modal toggle buttons to match main page
+        modalToggleButtons.forEach(btn => {
+          if (btn.dataset.unit === mainPageUnit) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+        
+        // Display temps in current page unit (convert from original if needed)
+        const originalUnit = '{{ unit|default:"F" }}';
+        
+        document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
+          const originalTemp = parseFloat(tempElement.dataset.originalTemp);
+          
+          if (isNaN(originalTemp)) return;
+          
+          let displayTemp = originalTemp;
+          
+          // Convert from original unit to current page unit
+          if (originalUnit === 'F' && mainPageUnit === 'C') {
+            displayTemp = Math.round((originalTemp - 32) * 5 / 9);
+          } else if (originalUnit === 'C' && mainPageUnit === 'F') {
+            displayTemp = Math.round((originalTemp * 9 / 5) + 32);
+          }
+          
+          tempElement.textContent = displayTemp + '°';
+        });
+        
+        // Update unit labels to match current page
+        document.querySelectorAll('.modal-temp-unit').forEach(unitElement => {
+          unitElement.textContent = mainPageUnit;
+        });
+        
+        document.getElementById('currentWeatherModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeCurrentWeatherModal() {
+        document.getElementById('currentWeatherModal').classList.remove('active');
+        document.body.style.overflow = ''; // Restore scrolling
+      }
+
+      function closeForecastModal() {
+        document.getElementById('forecastModal').classList.remove('active');
+        document.body.style.overflow = ''; // Restore scrolling
+      }
+
+      function openMoonModal() {
+        document.getElementById('moonModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeMoonModal() {
+        document.getElementById('moonModal').classList.remove('active');
+        document.body.style.overflow = '';
+      }
+
+      function closeModal(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+          closeCurrentWeatherModal();
+          closeForecastModal();
+          closeMoonModal();
+        }
+      }
+
+      function openForecastModal(cardElement) {
+        // Get data from card attributes
+        const name = cardElement.dataset.periodName;
+        const temp = cardElement.dataset.periodTemp;
+        const shortForecast = cardElement.dataset.periodShort;
+        const detailedForecast = cardElement.dataset.periodDetailed;
+        const windSpeed = cardElement.dataset.periodWindSpeed;
+        const windDir = cardElement.dataset.periodWindDir;
+        const precip = cardElement.dataset.periodPrecip;
+        const humidity = cardElement.dataset.periodHumidity;
+        const tempTrend = cardElement.dataset.periodTempTrend;
+        const isDaytime = cardElement.dataset.periodIsDay === 'True';
+        
+        // Get main page unit
+        const mainPageUnit = document.querySelector('.temp-toggle.active').dataset.unit;
+        const originalUnit = '{{ unit|default:"F" }}';
+        
+        // Populate modal
+        document.getElementById('forecastModalTitle').textContent = name;
+        document.getElementById('forecastModalShortForecast').textContent = shortForecast;
+        document.getElementById('forecastModalDetailed').textContent = detailedForecast;
+        
+        // Temperature with conversion
+        const tempElement = document.getElementById('forecastModalTemp');
+        tempElement.dataset.temp = temp;
+        tempElement.dataset.originalTemp = temp;
+        tempElement.dataset.originalUnit = originalUnit;
+        
+        let displayTemp = parseInt(temp);
+        if (mainPageUnit === 'C' && originalUnit === 'F') {
+          displayTemp = Math.round((displayTemp - 32) * 5 / 9);
+        } else if (mainPageUnit === 'F' && originalUnit === 'C') {
+          displayTemp = Math.round((displayTemp * 9 / 5) + 32);
+        }
+        tempElement.textContent = displayTemp + '°';
+        
+        // Temperature trend
+        const trendElement = document.getElementById('forecastModalTempTrend');
+        if (tempTrend && tempTrend !== 'None') {
+          trendElement.textContent = `(${tempTrend})`;
+          trendElement.style.display = 'inline';
+        } else {
+          trendElement.style.display = 'none';
+        }
+        
+        // Sync toggle buttons with main page
+        document.querySelectorAll('.forecast-modal-temp-toggle').forEach(btn => {
+          if (btn.dataset.unit === mainPageUnit) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+        document.getElementById('forecastModalTempUnit').textContent = mainPageUnit;
+        
+        // Set weather icon (copy from card)
+        const iconHTML = cardElement.querySelector('.weather-icon-container').innerHTML;
+        document.getElementById('forecastModalIcon').innerHTML = iconHTML;
+        
+        // Wind
+        document.getElementById('forecastModalWind').textContent = 
+          windSpeed && windSpeed !== 'None' ? `${windSpeed} ${windDir}` : 'Calm';
+        
+        // Precipitation (only show if available)
+        const precipContainer = document.getElementById('forecastModalPrecipContainer');
+        if (precip && precip !== '') {
+          document.getElementById('forecastModalPrecip').textContent = precip + '%';
+          precipContainer.style.display = 'block';
+        } else {
+          precipContainer.style.display = 'none';
+        }
+        
+        // Humidity (only show if available)
+        const humidityContainer = document.getElementById('forecastModalHumidityContainer');
+        if (humidity && humidity !== '') {
+          document.getElementById('forecastModalHumidity').textContent = humidity + '%';
+          humidityContainer.style.display = 'block';
+        } else {
+          humidityContainer.style.display = 'none';
+        }
+        
+        // Open modal
+        document.getElementById('forecastModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+
+      // Close modal on Escape key
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+          closeCurrentWeatherModal();
+          closeForecastModal();
+          closeMoonModal();
+        }
+      });
+
+      // Handle MODAL temperature toggle clicks (separate from main page toggle)
+      document.querySelectorAll('.modal-temp-toggle').forEach(button => {
+        button.addEventListener('click', function() {
+          const newUnit = this.dataset.unit;
+          const currentUnit = document.querySelector('.modal-temp-toggle.active').dataset.unit;
+          
+          // Don't do anything if clicking the same unit
+          if (newUnit === currentUnit) return;
+          
+          // Remove active class from all modal toggle buttons
+          document.querySelectorAll('.modal-temp-toggle').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          
+          // Add active class to clicked button
+          this.classList.add('active');
+          
+          // Store original unit if not already stored
+          const originalUnit = '{{ unit|default:"F" }}';
+          
+          // Convert all temperatures in the MODAL only
+          document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
+            // Get the original temperature value (store it first time)
+            if (!tempElement.dataset.originalTemp) {
+              tempElement.dataset.originalTemp = tempElement.dataset.temp;
+              tempElement.dataset.originalUnit = originalUnit;
+            }
+            
+            let originalTemp = parseFloat(tempElement.dataset.originalTemp);
+            
+            // Skip if originalTemp is NaN
+            if (isNaN(originalTemp)) {
+              return;
+            }
+            
+            let originalTempUnit = tempElement.dataset.originalUnit;
+            let displayTemp;
+            
+            // Always convert from the original value
+            if (originalTempUnit === 'F') {
+              if (newUnit === 'C') {
+                displayTemp = Math.round((originalTemp - 32) * 5 / 9);
+              } else {
+                displayTemp = Math.round(originalTemp);
+              }
+            } else { // originalUnit is C
+              if (newUnit === 'F') {
+                displayTemp = Math.round((originalTemp * 9 / 5) + 32);
+              } else {
+                displayTemp = Math.round(originalTemp);
+              }
+            }
+            
+            // Update display
+            tempElement.textContent = displayTemp + '°';
+          });
+          
+          // Update all unit labels in modal
+          document.querySelectorAll('.modal-temp-unit').forEach(unitElement => {
+            unitElement.textContent = newUnit;
+          });
+        });
+      });
+
+      // Handle FORECAST MODAL temperature toggle clicks
+      document.querySelectorAll('.forecast-modal-temp-toggle').forEach(button => {
+        button.addEventListener('click', function() {
+          const newUnit = this.dataset.unit;
+          const currentUnit = document.querySelector('.forecast-modal-temp-toggle.active').dataset.unit;
+          
+          if (newUnit === currentUnit) return;
+          
+          document.querySelectorAll('.forecast-modal-temp-toggle').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          
+          this.classList.add('active');
+          
+          const originalUnit = '{{ unit|default:"F" }}';
+          
+          // Convert temperature in forecast modal
+          const tempElement = document.getElementById('forecastModalTemp');
+          if (!tempElement.dataset.originalTemp) {
+            tempElement.dataset.originalTemp = tempElement.dataset.temp;
+            tempElement.dataset.originalUnit = originalUnit;
+          }
+          
+          let originalTemp = parseFloat(tempElement.dataset.originalTemp);
+          
+          // Skip if originalTemp is NaN
+          if (isNaN(originalTemp)) {
+            return;
+          }
+          
+          let originalTempUnit = tempElement.dataset.originalUnit;
+          let displayTemp;
+          
+          if (originalTempUnit === 'F') {
+            displayTemp = newUnit === 'C' ? Math.round((originalTemp - 32) * 5 / 9) : Math.round(originalTemp);
+          } else {
+            displayTemp = newUnit === 'F' ? Math.round((originalTemp * 9 / 5) + 32) : Math.round(originalTemp);
+          }
+          
+          tempElement.textContent = displayTemp + '°';
+          document.getElementById('forecastModalTempUnit').textContent = newUnit;
+        });
+      });
+
       // Handle temperature toggle clicks
       document.querySelectorAll('.temp-toggle').forEach(button => {
         button.addEventListener('click', function() {
@@ -420,6 +1144,11 @@
           // Convert all temperatures on the page
           document.querySelectorAll('[data-temp]').forEach(tempElement => {
             let temp = parseFloat(tempElement.dataset.temp);
+            
+            // Skip if temp is NaN (e.g., from "N/A" or invalid data)
+            if (isNaN(temp)) {
+              return;
+            }
             
             if (newUnit === 'C') {
               // Convert F to C
@@ -447,6 +1176,21 @@
       });
     </script>
     
+    <script>
+      // Store original temperatures on page load BEFORE any user interactions
+      document.addEventListener('DOMContentLoaded', function() {
+        const originalUnit = '{{ unit|default:"F" }}';
+        
+        // Store originals for modal temp displays
+        document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
+          const originalTemp = tempElement.dataset.temp;
+          if (originalTemp && !tempElement.dataset.originalTemp) {
+            tempElement.dataset.originalTemp = originalTemp;
+            tempElement.dataset.originalUnit = originalUnit;
+          }
+        });
+      });
+    </script>
 
 </body>
 

@@ -2,7 +2,7 @@
 Weather service module - handles all external API calls and data processing
 """
 import requests
-from geopy.geocoders import Nominatim
+from geopy.geocoders import Nominatim, Photon
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
 
@@ -19,15 +19,75 @@ class WeatherService:
         
         Returns: tuple (lat, lon, location_obj) or (None, None, None) if failed
         """
-        geolocator = Nominatim(user_agent="my_weather_app")
+        import re
         
-        try:
-            location = geolocator.geocode(f"{address}, USA", timeout=timeout)
-            if location:
-                return location.latitude, location.longitude, location
-            return None, None, None
-        except (GeocoderTimedOut, GeocoderServiceError):
-            raise Exception("Geocoding service timeout - please try again")
+        # Check if it looks like a ZIP code (5 digits or 5+4 format)
+        zip_pattern = re.match(r'^\d{5}(-\d{4})?$', address.strip())
+        
+        if zip_pattern:
+            # It's a ZIP code - use Nominatim with explicit postalcode parameter
+            zip_code = address.strip()
+            
+            # Validate it's a real US ZIP code range (00501-99950)
+            zip_num = int(zip_code[:5])
+            
+            if zip_num < 501 or zip_num > 99950:
+                return None, None, None
+            
+            # Use Nominatim with structured query (more reliable for ZIP codes)
+            try:
+                nom = Nominatim(user_agent="my_weather_app")
+                
+                # Try structured query first (most reliable)
+                location = nom.geocode(
+                    query={'postalcode': zip_code, 'country': 'us'},
+                    timeout=timeout,
+                    exactly_one=True,
+                    addressdetails=True
+                )
+                
+                # If structured query fails, try simple query as fallback
+                if not location:
+                    location = nom.geocode(
+                        f"{zip_code}, United States",
+                        timeout=timeout,
+                        exactly_one=True,
+                        addressdetails=True,
+                        country_codes='us'
+                    )
+                
+                if location:
+                    # Verify it's actually in the US (lat 24-50, lon -125 to -65)
+                    if 24 <= location.latitude <= 50 and -125 <= location.longitude <= -65:
+                        return location.latitude, location.longitude, location
+                
+                return None, None, None
+                
+            except Exception as e:
+                print(f"Geocoding error for ZIP {zip_code}: {e}")
+                return None, None, None
+        
+        else:
+            # City, State - use Nominatim
+            geolocator = Nominatim(user_agent="my_weather_app")
+            search_query = f"{address}, USA"
+            
+            try:
+                location = geolocator.geocode(
+                    search_query, 
+                    timeout=timeout, 
+                    exactly_one=True, 
+                    addressdetails=True, 
+                    country_codes='us'
+                )
+                
+                if location:
+                    return location.latitude, location.longitude, location
+                
+                return None, None, None
+                
+            except (GeocoderTimedOut, GeocoderServiceError):
+                raise Exception("Geocoding service timeout - please try again")
     
     def get_metadata(self, lat, lon):
         """
