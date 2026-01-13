@@ -57,8 +57,11 @@ class WeatherService:
                     )
                 
                 if location:
-                    # Verify it's actually in the US (lat 24-50, lon -125 to -65)
-                    if 24 <= location.latitude <= 50 and -125 <= location.longitude <= -65:
+                    # Verify it's actually in the US (includes Alaska and Hawaii)
+                    # Continental US: lat 24-50, lon -125 to -65
+                    # Alaska: lat 51-72, lon -180 to -130
+                    # Hawaii: lat 18-23, lon -161 to -154
+                    if (18 <= location.latitude <= 72 and -180 <= location.longitude <= -65):
                         return location.latitude, location.longitude, location
                 
                 return None, None, None

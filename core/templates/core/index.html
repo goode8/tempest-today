@@ -356,7 +356,7 @@
           <h2 style="margin-top: 0; font-size: 1.5em; color: #856404;">Oops!</h2>
           <p style="font-size: 1.1em;">{{ error_message }}</p>
           <p style="font-size: 0.9em; margin-top: 15px; color: #666;">
-            Try entering a US ZIP code (like 00001) or City, State (like Honolulu, HI).
+            Try entering a US ZIP code (like 96813) or City, State (like Honolulu, HI).
           </p>
         {% endif %}
       </div>
@@ -440,8 +440,8 @@
                     </span>
                     <p style="margin: 5px 0; font-weight: bold; color: var(--text-primary);">{{ alert.headline }}</p>
                     <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.description }}</p>
-                    <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.instruction }}</p>
-                    <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.urgency }}</p>
+                    {% comment %} <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.instruction }}</p> {% endcomment %}
+                    {% comment %} <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.urgency }}</p> {% endcomment %}
                   </div>
                 {% endfor %}
               </div>
