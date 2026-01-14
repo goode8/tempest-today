@@ -27,6 +27,36 @@ def index(request):
     
     address = request.POST.get("address")
     weather_service = WeatherService()
+    
+    # If no address provided, show error but pick a random location for fun
+    show_random_location_message = False
+    if not address or address.strip() == "":
+        show_random_location_message = True
+        # Pick a random interesting US city
+        import random
+        random_locations = [
+            "Miami, FL",
+            "Seattle, WA", 
+            "Denver, CO",
+            "Portland, ME",
+            "Austin, TX",
+            "Chicago, IL",
+            "Phoenix, AZ",
+            "Honolulu, HI",
+            "Anchorage, AK",
+            "Boston, MA",
+            "San Francisco, CA",
+            "New Orleans, LA",
+            "Key West, FL",
+            "Fargo, ND",
+            "Las Vegas, NV",
+            "Portland, OR",
+            "Nashville, TN",
+            "Minneapolis, MN",
+            "San Diego, CA",
+            "Savannah, GA"
+        ]
+        address = random.choice(random_locations)
 
     # Step 1: Get coordinates from address
     try:
@@ -76,6 +106,16 @@ def index(request):
             "unit": unit
         })
     
+    # Extract state abbreviation from geocoded location
+    state_abbrev = None
+    if location and hasattr(location, 'raw'):
+        address_components = location.raw.get('address', {})
+        # Try to get state from ISO code first (e.g., "US-CA")
+        state_abbrev = address_components.get('ISO3166-2-lvl4', '').split('-')[-1] if address_components.get('ISO3166-2-lvl4') else None
+        # Fallback to state field if ISO code not available
+        if not state_abbrev:
+            state_abbrev = address_components.get('state')
+    
     # Step 3: Get forecast
     forecasts = weather_service.get_forecast(metadata["forecast"])
     
@@ -90,7 +130,7 @@ def index(request):
             period['temperatureUnit'] = 'C'
     
     # Step 4: Get current observations
-    current_weather = get_current_weather(weather_service, metadata, unit)
+    current_weather = get_current_weather(weather_service, metadata, unit, state_abbrev)
     
     # Step 5: Get astronomy data
     astronomy = get_astronomy_data(lat, lon)
@@ -141,12 +181,15 @@ def index(request):
             "current": current_weather,
             "address": address,
             "active_alerts": active_alerts,
-            "unit": unit
+            "unit": unit,
+            "show_random_location_message": show_random_location_message,
+            "lat": lat,
+            "lon": lon
         }
     )
 
 
-def get_current_weather(weather_service, metadata, unit='F'):
+def get_current_weather(weather_service, metadata, unit='F', state_abbrev=None):
     """
     Extract and process current weather observations
     
@@ -154,20 +197,27 @@ def get_current_weather(weather_service, metadata, unit='F'):
         weather_service: WeatherService instance
         metadata: NWS metadata dict
         unit: Temperature unit ('F' or 'C')
+        state_abbrev: State abbreviation from geocoded location (e.g., 'CA', 'NY')
     
     Returns: dict of current weather data (may have None values if data unavailable)
     """
     # Get nearest weather station
-    station_id, station_name = weather_service.get_nearest_station(
+    station_id, station_name, _ = weather_service.get_nearest_station(
         metadata["observationStations"]
     )
+    
+    # Format station name with state if available
+    if station_name and state_abbrev:
+        station_display = f"{station_name}, {state_abbrev}"
+    else:
+        station_display = station_name
     
     if not station_id:
         return {
             "temp": None,
             "description": None,
             "station": None,
-            "station_full_name": station_name,
+            "station_full_name": station_display,
             "wind_speed_mph": None,
             "wind_label": None,
             "current_wind_direction": None,
@@ -285,7 +335,7 @@ def get_current_weather(weather_service, metadata, unit='F'):
         "temp": temp_display,
         "description": description,
         "station": station_id,
-        "station_full_name": station_name,
+        "station_full_name": station_display,
         "wind_speed_mph": wind_speed_mph if wind_speed_mph else None,
         "wind_label": wind_label if wind_label and wind_label != "no wind data available" else None,
         "current_wind_direction": wind_direction if wind_direction else None,

@@ -108,7 +108,7 @@
     }
 
     button[type="submit"] {
-      background: #667eea;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       border: none;
       padding: 12px 24px;
@@ -121,7 +121,7 @@
     }
 
     button[type="submit"]:hover {
-      background: #5568d3;
+      background: linear-gradient(135deg, #5568d3 0%, #653a8a 100%);
       transform: scale(1.05);
       box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     }
@@ -129,6 +129,13 @@
     button[type="submit"]:active {
       transform: scale(0.95);
     }
+    
+    /* NWS link button hover effect */
+    #alertModalNWSLink:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
     @media (max-width: 768px) {
       form {
         flex-direction: column !important;
@@ -290,12 +297,26 @@
     }
 
     .clickable-card {
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
     }
 
     .clickable-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .alert-container {
+      transition: all 0.3s ease;
+    }
+    
+    .alert-container:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(211, 47, 47, 0.3);
+      border-color: #b71c1c;
+    }
+    
+    .alert-item:hover {
+      background-color: rgba(211, 47, 47, 0.08);
     }
 
     @media (max-width: 768px) {
@@ -356,11 +377,26 @@
           <h2 style="margin-top: 0; font-size: 1.5em; color: #856404;">Oops!</h2>
           <p style="font-size: 1.1em;">{{ error_message }}</p>
           <p style="font-size: 0.9em; margin-top: 15px; color: #666;">
-            Try entering a US ZIP code (like 96813) or City, State (like Honolulu, HI).
+            Try entering a US ZIP code (like 00001) or City, State (like Honolulu, HI).
           </p>
         {% endif %}
       </div>
       {% endif %}
+
+    {% if show_random_location_message %}
+      <div style="max-width: 500px; margin: 20px auto; padding: 20px; border-radius: 12px; text-align: center; 
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; 
+                  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+        <div style="font-size: 2em; margin-bottom: 8px;">🎲</div>
+        <h3 style="margin-top: 0; font-size: 1.2em;">Please enter a location above</h3>
+        <p style="font-size: 0.95em; line-height: 1.4; margin: 12px 0; opacity: 0.95;">
+          In the meantime, here's the weather for <strong>{{ address }}</strong>!
+        </p>
+        <p style="font-size: 0.8em; margin-top: 12px; opacity: 0.85;">
+          Refresh to see a different random location 🌍
+        </p>
+      </div>
+    {% endif %}
 
     {% if forecasts %}
 
@@ -433,15 +469,25 @@
               <div class="alert-container" style="background-color: var(--alert-bg, #fff3f3); border: 2px solid #d32f2f; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                 <h3 style="color: #d32f2f; margin-top: 0;">⚠️ Active Weather Alerts</h3>
                 {% for alert in current.active_alerts %}
-                  <div class="alert-item" style="margin-bottom: 15px; border-bottom: 1px solid #ffcdd2; padding-bottom: 10px;">
-                    <strong style="font-size: 1.1em; color: var(--text-primary)">{{ alert.event }}</strong>
-                    <span style="font-size: 0.8em; padding: 2px 5px; border-radius: 4px; background: #d32f2f; color: white; margin-left: 10px;">
-                        {{ alert.severity }}
-                    </span>
+                  <div class="alert-item clickable-card" 
+                       style="margin-bottom: 10px; padding: 12px; cursor: pointer; transition: all 0.2s; border-radius: 6px;"
+                       onclick="openAlertModal(this)"
+                       data-alert-event="{{ alert.event }}"
+                       data-alert-severity="{{ alert.severity }}"
+                       data-alert-headline="{{ alert.headline }}"
+                       data-alert-description="{{ alert.description|escapejs }}"
+                       data-alert-instruction="{{ alert.instruction|default:'No specific instructions provided.'|escapejs }}"
+                       data-alert-urgency="{{ alert.urgency }}"
+                       data-alert-lat="{{ lat }}"
+                       data-alert-lon="{{ lon }}">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
+                      <strong style="font-size: 1.1em; color: var(--text-primary)">{{ alert.event }}</strong>
+                      <span style="font-size: 0.8em; padding: 2px 8px; border-radius: 4px; background: #d32f2f; color: white; white-space: nowrap;">
+                          {{ alert.severity }}
+                      </span>
+                    </div>
                     <p style="margin: 5px 0; font-weight: bold; color: var(--text-primary);">{{ alert.headline }}</p>
-                    <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.description }}</p>
-                    {% comment %} <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.instruction }}</p> {% endcomment %}
-                    {% comment %} <p style="font-size: 0.9em; color: var(--text-primary);">{{ alert.urgency }}</p> {% endcomment %}
+                    <p style="font-size: 0.85em; color: #666; margin: 5px 0;">Click for full details →</p>
                   </div>
                 {% endfor %}
               </div>
@@ -845,6 +891,61 @@
       </div>
       {% endif %}
     </div>
+    
+    <!-- Alert Details Modal -->
+    <div id="alertModal" class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2 id="alertModalTitle" style="margin: 0; color: #d32f2f;">
+            <span style="margin-right: 8px;">⚠️</span>
+            <span id="alertModalEvent"></span>
+          </h2>
+          <button class="modal-close" onclick="closeAlertModal()" aria-label="Close modal">×</button>
+        </div>
+        <div class="modal-body">
+          <!-- Severity & Urgency badges -->
+          <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+            <span id="alertModalSeverity" style="display: inline-block; font-size: 0.85em; padding: 6px 12px; border-radius: 6px; background: #d32f2f; color: white; font-weight: 600; white-space: nowrap;"></span>
+            <span id="alertModalUrgency" style="display: inline-block; font-size: 0.85em; padding: 6px 12px; border-radius: 6px; background: #ff9800; color: white; font-weight: 600; white-space: nowrap;"></span>
+          </div>
+          
+          <!-- Headline -->
+          <div class="modal-section">
+            <h4 style="color: var(--text-primary); margin-bottom: 10px;">📋 Alert Headline</h4>
+            <p id="alertModalHeadline" style="color: var(--text-primary); font-weight: 500; line-height: 1.5;"></p>
+          </div>
+          
+          <!-- Description -->
+          <div class="modal-section">
+            <h4 style="color: var(--text-primary); margin-bottom: 10px;">📄 Description</h4>
+            <p id="alertModalDescription" style="color: var(--text-primary); line-height: 1.6; white-space: pre-wrap;"></p>
+          </div>
+          
+          <!-- Instructions -->
+          <div class="modal-section">
+            <h4 style="color: var(--text-primary); margin-bottom: 10px;">🛡️ Safety Instructions</h4>
+            <p id="alertModalInstruction" style="color: var(--text-primary); line-height: 1.6; white-space: pre-wrap;"></p>
+          </div>
+          
+          <!-- NWS Link -->
+          <div style="text-align: center; margin: 20px 0;">
+            <a id="alertModalNWSLink" href="#" target="_blank" rel="noopener noreferrer" 
+               style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                      color: white; text-decoration: none; border-radius: 8px; font-weight: 600; 
+                      transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+              🌐 View Full Alert on NWS Website →
+            </a>
+          </div>
+          
+          <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ff9800; border-radius: 4px;">
+            <p style="margin: 0; color: #856404; font-size: 0.9em; line-height: 1.5;">
+              <strong>⚠️ Important:</strong> Always follow official guidance from local authorities and the National Weather Service.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <script>
       // Modal functions
       function openCurrentWeatherModal() {
@@ -910,11 +1011,51 @@
         document.body.style.overflow = '';
       }
 
+      function openAlertModal(alertElement) {
+        // Get alert data from element attributes
+        const event = alertElement.dataset.alertEvent;
+        const severity = alertElement.dataset.alertSeverity;
+        const headline = alertElement.dataset.alertHeadline;
+        const description = alertElement.dataset.alertDescription;
+        const instruction = alertElement.dataset.alertInstruction;
+        const urgency = alertElement.dataset.alertUrgency;
+        const lat = alertElement.dataset.alertLat;
+        const lon = alertElement.dataset.alertLon;
+        
+        // Populate modal
+        document.getElementById('alertModalEvent').textContent = event;
+        document.getElementById('alertModalSeverity').textContent = severity;
+        document.getElementById('alertModalUrgency').textContent = 'Urgency: ' + urgency;
+        document.getElementById('alertModalHeadline').textContent = headline;
+        document.getElementById('alertModalDescription').textContent = description || 'No additional description available.';
+        document.getElementById('alertModalInstruction').textContent = instruction || 'No specific instructions provided.';
+        
+        // Build NWS forecast URL from lat/lon
+        const nwsLink = document.getElementById('alertModalNWSLink');
+        if (lat && lon) {
+          const nwsUrl = `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}`;
+          nwsLink.href = nwsUrl;
+          nwsLink.style.display = 'inline-block';
+        } else {
+          nwsLink.style.display = 'none';
+        }
+        
+        // Open modal
+        document.getElementById('alertModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeAlertModal() {
+        document.getElementById('alertModal').classList.remove('active');
+        document.body.style.overflow = '';
+      }
+
       function closeModal(event) {
         if (event.target.classList.contains('modal-overlay')) {
           closeCurrentWeatherModal();
           closeForecastModal();
           closeMoonModal();
+          closeAlertModal();
         }
       }
 
@@ -1010,6 +1151,7 @@
           closeCurrentWeatherModal();
           closeForecastModal();
           closeMoonModal();
+          closeAlertModal();
         }
       });
 

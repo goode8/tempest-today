@@ -137,3 +137,9 @@ CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
+
+# Make CSRF token last longer (default is session length)
+CSRF_COOKIE_AGE = 31449600  # 1 year in seconds
+
+# Or make session last longer
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds (default is 2 weeks already)

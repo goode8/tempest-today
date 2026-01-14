@@ -57,11 +57,8 @@ class WeatherService:
                     )
                 
                 if location:
-                    # Verify it's actually in the US (includes Alaska and Hawaii)
-                    # Continental US: lat 24-50, lon -125 to -65
-                    # Alaska: lat 51-72, lon -180 to -130
-                    # Hawaii: lat 18-23, lon -161 to -154
-                    if (18 <= location.latitude <= 72 and -180 <= location.longitude <= -65):
+                    # Verify it's actually in the US (lat 24-50, lon -125 to -65)
+                    if 24 <= location.latitude <= 50 and -125 <= location.longitude <= -65:
                         return location.latitude, location.longitude, location
                 
                 return None, None, None
@@ -119,7 +116,7 @@ class WeatherService:
         """
         Get the nearest weather station info
         
-        Returns: tuple (station_id, station_name) or (None, None)
+        Returns: tuple (station_id, station_name, state_abbrev) or (None, None, None)
         """
         response = requests.get(stations_url, headers=self.headers)
         data = response.json()
@@ -127,9 +124,28 @@ class WeatherService:
         features = data.get("features", [])
         if features:
             props = features[0]["properties"]
-            return props.get("stationIdentifier"), props.get("name")
+            station_id = props.get("stationIdentifier")
+            station_name = props.get("name")
+            
+            # Extract state from station timezone (e.g., "America/New_York" -> use ID parsing)
+            # OR use the stationIdentifier (first letter often indicates region)
+            # Better: parse from the name if it has comma-state format
+            # OR get from timeZone field
+            
+            # Try to extract state from the station's timeZone or name
+            state = None
+            
+            # Method 1: Some stations have state in parentheses in name
+            # e.g., "Seattle-Tacoma International Airport (SEA)"
+            # Method 2: Use the timeZone to infer state (not reliable)
+            # Method 3: Parse from station identifier (K prefix = continental US)
+            
+            # For now, we'll leave state extraction to be handled by the geocoded location
+            # The NWS API doesn't consistently provide state abbreviations
+            
+            return station_id, station_name, None
         
-        return None, None
+        return None, None, None
     
     def get_current_observations(self, station_id):
         """
@@ -156,6 +172,7 @@ class WeatherService:
         alerts = []
         for feature in data.get("features", []):
             props = feature.get("properties", {})
+            
             alerts.append({
                 "event": props.get("event"),
                 "severity": props.get("severity"),
