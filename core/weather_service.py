@@ -70,6 +70,44 @@ class WeatherService:
         else:
             # City, State - use Nominatim
             geolocator = Nominatim(user_agent="my_weather_app")
+            
+            # Try to parse city and state
+            # Common formats: "fort morgan co", "fort morgan, co", "fort morgan CO"
+            import re
+            
+            # Split by comma or space, get last part as potential state
+            parts = re.split(r'[,\s]+', address.strip())
+            
+            # US state abbreviations (2 letters)
+            state_abbrevs = {
+                'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+                'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+                'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+                'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+                'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
+            }
+            
+            # Check if last part is a state abbreviation
+            if len(parts) >= 2 and parts[-1].upper() in state_abbrevs:
+                # Use structured query
+                city = ' '.join(parts[:-1])
+                state = parts[-1].upper()
+                
+                try:
+                    location = geolocator.geocode(
+                        query={'city': city, 'state': state, 'country': 'us'},
+                        timeout=timeout,
+                        exactly_one=True,
+                        addressdetails=True
+                    )
+                    
+                    if location:
+                        return location.latitude, location.longitude, location
+                    
+                except (GeocoderTimedOut, GeocoderServiceError):
+                    raise Exception("Geocoding service timeout - please try again")
+            
+            # Fallback: use simple query with ", USA"
             search_query = f"{address}, USA"
             
             try:
