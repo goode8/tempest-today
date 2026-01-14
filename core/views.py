@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.core.cache import cache
 from .weather_service import WeatherService
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from .utils import (
@@ -96,6 +97,50 @@ def index(request):
             "unit": unit
         })
 
+    # Check cache first (round coordinates to 2 decimal places for cache key)
+    cache_key = f"weather_{round(lat, 2)}_{round(lon, 2)}"
+    cached_data = cache.get(cache_key)
+    
+    if cached_data:
+        # Use cached data but still convert temperatures if needed
+        forecasts = cached_data['forecasts']
+        current_weather = cached_data['current']
+        active_alerts = cached_data['active_alerts']
+        state_abbrev = cached_data['state_abbrev']
+        
+        # Convert forecast temperatures if unit changed
+        if unit == 'C':
+            for period in forecasts:
+                period['temperature'] = convert_temperature(
+                    period['temperature'], 
+                    from_unit='F', 
+                    to_unit='C'
+                )
+                period['temperatureUnit'] = 'C'
+        
+        # Convert current temp if unit changed
+        if current_weather.get('temp') and current_weather['temp'] != "N/A":
+            if unit == 'C':
+                current_weather['temp'] = convert_temperature(
+                    current_weather['temp'],
+                    from_unit='F',
+                    to_unit='C'
+                )
+        
+        return render(
+            request,
+            "core/index.html",
+            {
+                "forecasts": forecasts,
+                "current": current_weather,
+                "address": address,
+                "active_alerts": active_alerts,
+                "unit": unit,
+                "show_random_location_message": show_random_location_message,
+                "lat": lat,
+                "lon": lon
+            }
+        )
 
     # Step 2: Get NWS metadata (forecast URL, stations URL)
     metadata = weather_service.get_metadata(lat, lon)
@@ -172,6 +217,16 @@ def index(request):
         current_weather["detailed_forecast"] = forecasts[0].get("detailedForecast", "")
     else:
         current_weather["detailed_forecast"] = ""
+    
+    # Cache the weather data for 10 minutes (600 seconds)
+    # Store in Fahrenheit to make unit conversion easier on cached data
+    cache_data = {
+        'forecasts': forecasts,
+        'current': current_weather,
+        'active_alerts': active_alerts,
+        'state_abbrev': state_abbrev
+    }
+    cache.set(cache_key, cache_data, 600)  # 10 minutes
     
     return render(
         request,

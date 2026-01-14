@@ -143,3 +143,14 @@ CSRF_COOKIE_AGE = 31449600  # 1 year in seconds
 
 # Or make session last longer
 SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds (default is 2 weeks already)
+
+# Cache configuration - use local memory cache (good for single-process apps)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-weather-cache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000  # Store up to 1000 location caches
+        }
+    }
+}
