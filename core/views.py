@@ -11,6 +11,7 @@ from .utils import (
 )
 from datetime import datetime
 import pytz
+import concurrent.futures
 
 
 def index(request):
@@ -161,8 +162,21 @@ def index(request):
         if not state_abbrev:
             state_abbrev = address_components.get('state')
     
-    # Step 3: Get forecast
-    forecasts = weather_service.get_forecast(metadata["forecast"])
+    # Step 3-6: Make API calls in parallel for faster loading
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        # Submit all API calls at once
+        forecast_future = executor.submit(weather_service.get_forecast, metadata["forecast"])
+        alerts_future = executor.submit(weather_service.get_active_alerts, lat, lon)
+        astronomy_future = executor.submit(get_astronomy_data, lat, lon)
+        
+        # Also get current weather in parallel (which internally calls get_nearest_station and get_current_observations)
+        current_weather_future = executor.submit(get_current_weather, weather_service, metadata, unit, state_abbrev)
+        
+        # Wait for all to complete and get results
+        forecasts = forecast_future.result()
+        active_alerts = alerts_future.result()
+        astronomy = astronomy_future.result()
+        current_weather = current_weather_future.result()
     
     # Convert forecast temperatures if needed
     if unit == 'C':
@@ -174,11 +188,7 @@ def index(request):
             )
             period['temperatureUnit'] = 'C'
     
-    # Step 4: Get current observations
-    current_weather = get_current_weather(weather_service, metadata, unit, state_abbrev)
-    
-    # Step 5: Get astronomy data
-    astronomy = get_astronomy_data(lat, lon)
+    # Add astronomy data to current weather
     current_weather.update(astronomy)
     
     # Step 5b: Determine if it's currently nighttime
@@ -208,8 +218,7 @@ def index(request):
     
     # current_weather['moon_visibility_msg'] = visibility_msg
     
-    # Step 6: Get active alerts
-    active_alerts = weather_service.get_active_alerts(lat, lon)
+    # Add alerts to current weather
     current_weather["active_alerts"] = active_alerts
     
     # Step 7: Add detailed forecast from first period
