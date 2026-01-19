@@ -410,7 +410,7 @@
         <div class="forecast-card current-hightlight clickable-card" onclick="openCurrentWeatherModal()" style="cursor: pointer;">
           <h3>{% if current.temp %}Current Conditions{% else %}{{ period.name }}{% endif %}</h3>
 
-          <div class="weather-icon-container">
+          <div class="weather-icon-container" id="currentWeatherMainIcon">
             {% with desc=current.description|default:period.shortForecast %}
               {% if "Sunny" in desc or "Clear" in desc and "Cloud" not in desc %}
                 {% if current.is_night %}
@@ -418,13 +418,21 @@
                 {% else %}
                   <span>☀️</span>
                 {% endif %}
+              {% elif "Rain" in desc or "Drizzle" in desc or "Shower" in desc %}
+                <span>🌧️</span>
+              {% elif "Snow" in desc %}
+                <span>❄️</span>
+              {% elif "Thunder" in desc or "Storm" in desc %}
+                <span>⛈️</span>
+              {% elif "Fog" in desc or "Haze" in desc %}
+                <span>🌫️</span>
+              {% elif "Wind" in desc or "Breezy" in desc %}
+                <span>💨</span>
+              {% elif "Cloud" in desc %}
+                <span>☁️</span>
+              {% else %}
+                <span>🌤️</span>
               {% endif %}
-              {% if "Cloud" in desc and "Rain" not in desc and "Storm" not in desc %}<span>☁️</span>{% endif %}
-              {% if "Rain" in desc or "Drizzle" in desc or "Shower" in desc %}<span>🌧️</span>{% endif %}
-              {% if "Snow" in desc %}<span>❄️</span>{% endif %}
-              {% if "Thunder" in desc or "Storm" in desc %}<span>⛈️</span>{% endif %}
-              {% if "Fog" in desc or "Haze" in desc %}<span>🌫️</span>{% endif %}
-              {% if "Wind" in desc or "Breezy" in desc %}<span>💨</span>{% endif %}
             {% endwith %}
           </div>
 
@@ -534,7 +542,7 @@
               {% with forecast=period.shortForecast|lower %}
                 {% comment %} NIGHT ONLY {% endcomment %}
                 {% if not period.isDaytime %}
-                  {% if "rain" in forecast or "drizzle" in forecast %}<span>🌧️</span>
+                  {% if "rain" in forecast or "drizzle" in forecast or "shower" in forecast %}<span>🌧️</span>
                   {% elif "partly sunny" in forecast or "mostly cloudy" in forecast or "partly cloudy" in forecast or "mostly sunny" in forecast %}
                     <span>☁️</span>
                   {% else %}
@@ -550,7 +558,11 @@
 
               {% comment %} DAY ONLY {% endcomment %}
               {% if period.isDaytime %}
-                {% if "rain" in forecast and "heavy" not in forecast and "light" not in forecast %}<span>🌧️</span>{% endif %}
+                {% if "rain" in forecast or "shower" in forecast %}
+                  {% if "heavy" not in forecast and "light rain" not in forecast %}
+                    <span>🌧️</span>
+                  {% endif %}
+                {% endif %}
                 {% if "light rain" in forecast or "drizzle" in forecast %}<span>🌦️</span>{% endif %}
                 {% if "sunny" in forecast and "partly" not in forecast and "mostly" not in forecast %}<span>☀️</span>{% endif %}
                 {% if "clear" in forecast %}<span>☀️</span>{% endif %}
@@ -615,26 +627,8 @@
               {% comment %} Current Temp & Description {% endcomment %}
               <div class="modal-section">
                 <div style="text-align: center;">
-                  <div class="weather-icon-container">
-                    {% with desc=current.description|default:forecasts.0.shortForecast %}
-                      {% if "Sunny" in desc or "Clear" in desc and "Cloud" not in desc %}
-                        <span>☀️</span>
-                      {% elif "Cloud" in desc and "Rain" not in desc and "Storm" not in desc %}
-                        <span>☁️</span>
-                      {% elif "Rain" in desc or "Drizzle" in desc or "Shower" in desc %}
-                        <span>🌧️</span>
-                      {% elif "Snow" in desc %}
-                        <span>❄️</span>
-                      {% elif "Thunder" in desc or "Storm" in desc %}
-                        <span>⛈️</span>
-                      {% elif "Fog" in desc or "Haze" in desc %}
-                        <span>🌫️</span>
-                      {% elif "Wind" in desc or "Breezy" in desc %}
-                        <span>💨</span>
-                      {% else %}
-                        <span>🌤️</span>
-                      {% endif %}
-                    {% endwith %}
+                  <div class="weather-icon-container" id="currentWeatherModalIcon">
+                    <!-- Icon will be copied from main card via JavaScript -->
                   </div>
                   <h3 style="font-size: 3em; margin: 10px 0;">
                     <span class="modal-temp-display" data-temp="{% if current.temp %}{{ current.temp }}{% else %}{{ forecasts.0.temperature }}{% endif %}">
@@ -961,6 +955,13 @@
             btn.classList.remove('active');
           }
         });
+        
+        // Copy weather icon from main card to modal (preserves night/day logic)
+        const mainIcon = document.getElementById('currentWeatherMainIcon');
+        const modalIcon = document.getElementById('currentWeatherModalIcon');
+        if (mainIcon && modalIcon) {
+          modalIcon.innerHTML = mainIcon.innerHTML;
+        }
         
         // Display temps in current page unit (convert from original if needed)
         const originalUnit = '{{ unit|default:"F" }}';
