@@ -540,40 +540,59 @@
 
             <div class="weather-icon-container">
               {% with forecast=period.shortForecast|lower %}
-                {% comment %} NIGHT ONLY {% endcomment %}
-                {% if not period.isDaytime %}
-                  {% if "rain" in forecast or "drizzle" in forecast or "shower" in forecast %}<span>🌧️</span>
-                  {% elif "partly sunny" in forecast or "mostly cloudy" in forecast or "partly cloudy" in forecast or "mostly sunny" in forecast %}
-                    <span>☁️</span>
-                  {% else %}
-                    <span>⭐</span>
-                  {% endif %}
-                {% endif %}
-
-              {% comment %} DAY OR NIGHT {% endcomment %}
+              
+              {# === SEVERE WEATHER (shown day or night) === #}
               {% if "thunderstorm" in forecast %}<span>⛈️</span>{% endif %}
-              {% if "snow" in forecast %}<span>❄️</span>{% endif %}
-              {% if "sleet" in forecast or "hail" in forecast%}<span>🌨️</span>{% endif %}
-              {% if "windy" in forecast or "breezy" in forecast %}<span>💨</span>{% endif %}
-
-              {% comment %} DAY ONLY {% endcomment %}
-              {% if period.isDaytime %}
-                {% if "rain" in forecast or "shower" in forecast %}
-                  {% if "heavy" not in forecast and "light rain" not in forecast %}
-                    <span>🌧️</span>
-                  {% endif %}
+              
+              {# === PRECIPITATION (check snow first, then rain) === #}
+              {% if "snow" in forecast %}
+                <span>❄️</span>
+              {% elif "sleet" in forecast or "hail" in forecast %}
+                <span>🌨️</span>
+              {% elif period.isDaytime %}
+                {# Day precipitation - rain only #}
+                {% if "slight chance of rain" in forecast or "slight chance of shower" in forecast or "slight chance rain" in forecast or "slight chance shower" in forecast %}
+                  <span>🌦️</span>
+                {% elif "light rain" in forecast or "drizzle" in forecast %}
+                  <span>🌦️</span>
+                {% elif "rain" in forecast or "shower" in forecast %}
+                  {% if "heavy" not in forecast %}<span>🌧️</span>{% endif %}
                 {% endif %}
-                {% if "light rain" in forecast or "drizzle" in forecast %}<span>🌦️</span>{% endif %}
-                {% if "sunny" in forecast and "partly" not in forecast and "mostly" not in forecast %}<span>☀️</span>{% endif %}
-                {% if "clear" in forecast %}<span>☀️</span>{% endif %}
-                {% if "partly sunny" in forecast or "mostly cloudy" in forecast %}<span>⛅</span>{% endif %}
-                {% if "partly cloudy" in forecast or "mostly sunny" in forecast %}<span>🌤️</span>{% endif %}
+              {% elif "rain" in forecast or "drizzle" in forecast or "shower" in forecast %}
+                {# Night precipitation - rain only #}
+                <span>🌧️</span>
               {% endif %}
-
-              {% comment %} COVERED SKIES{% endcomment %}
-              {% if "cloudy" in forecast and "partly" not in forecast and "mostly" not in forecast or "overcast" in forecast %}<span>☁️</span>{% endif %}
+              
+              {# === SKY CONDITIONS === #}
+              {% if period.isDaytime %}
+                {# Day sky conditions #}
+                {% if "sunny" in forecast and "partly" not in forecast and "mostly" not in forecast %}
+                  <span>☀️</span>
+                {% elif "clear" in forecast %}
+                  <span>☀️</span>
+                {% elif "partly sunny" in forecast or "mostly cloudy" in forecast %}
+                  <span>⛅</span>
+                {% elif "partly cloudy" in forecast or "mostly sunny" in forecast %}
+                  <span>🌤️</span>
+                {% elif "cloudy" in forecast and "partly" not in forecast and "mostly" not in forecast %}
+                  <span>☁️</span>
+                {% elif "overcast" in forecast %}
+                  <span>☁️</span>
+                {% endif %}
+              {% else %}
+                {# Night sky conditions #}
+                {% if "partly sunny" in forecast or "mostly cloudy" in forecast or "partly cloudy" in forecast or "mostly sunny" in forecast %}
+                  <span>☁️</span>
+                {% else %}
+                  <span>⭐</span>
+                {% endif %}
+              {% endif %}
+              
+              {# === VISIBILITY & WIND === #}
               {% if "fog" in forecast or "haze" in forecast %}<span>🌫️</span>{% endif %}
-            {% endwith %}
+              {% if "windy" in forecast or "breezy" in forecast %}<span>💨</span>{% endif %}
+              
+              {% endwith %}
             </div>
 
             <p style="font-size: 1.5em; margin: 0">
