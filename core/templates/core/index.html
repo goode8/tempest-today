@@ -1042,13 +1042,24 @@
         const lat = alertElement.dataset.alertLat;
         const lon = alertElement.dataset.alertLon;
         
+        // Decode Unicode escapes in alert text (e.g., \u000A to newline, \u002D to -)
+        const decodeUnicode = (text) => {
+          if (!text) return text;
+          return text.replace(/\\u[\dA-F]{4}/gi, (match) => {
+            return String.fromCharCode(parseInt(match.replace(/\\u/g, ''), 16));
+          });
+        };
+        
+        const decodedDescription = decodeUnicode(description);
+        const decodedInstruction = decodeUnicode(instruction);
+        
         // Populate modal
         document.getElementById('alertModalEvent').textContent = event;
         document.getElementById('alertModalSeverity').textContent = severity;
         document.getElementById('alertModalUrgency').textContent = 'Urgency: ' + urgency;
         document.getElementById('alertModalHeadline').textContent = headline;
-        document.getElementById('alertModalDescription').textContent = description || 'No additional description available.';
-        document.getElementById('alertModalInstruction').textContent = instruction || 'No specific instructions provided.';
+        document.getElementById('alertModalDescription').textContent = decodedDescription || 'No additional description available.';
+        document.getElementById('alertModalInstruction').textContent = decodedInstruction || 'No specific instructions provided.';
         
         // Build NWS forecast URL from lat/lon
         const nwsLink = document.getElementById('alertModalNWSLink');
