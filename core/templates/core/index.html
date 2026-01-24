@@ -1096,10 +1096,15 @@
         const mainPageUnit = document.querySelector('.temp-toggle.active').dataset.unit;
         const originalUnit = '{{ unit|default:"F" }}';
         
+        // Decode Unicode escapes in detailedForecast (e.g., \u002D to -)
+        const decodedForecast = detailedForecast.replace(/\\u[\dA-F]{4}/gi, (match) => {
+          return String.fromCharCode(parseInt(match.replace(/\\u/g, ''), 16));
+        });
+        
         // Populate modal
         document.getElementById('forecastModalTitle').textContent = name;
         document.getElementById('forecastModalShortForecast').textContent = shortForecast;
-        document.getElementById('forecastModalDetailed').textContent = detailedForecast;
+        document.getElementById('forecastModalDetailed').textContent = decodedForecast;
         
         // Temperature with conversion
         const tempElement = document.getElementById('forecastModalTemp');
