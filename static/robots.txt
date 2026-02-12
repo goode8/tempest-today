@@ -1,0 +1,27 @@
+# Allow major search engines
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: Slurp
+User-agent: DuckDuckBot
+Allow: /
+
+# Allow social media crawlers for link previews
+User-agent: facebookexternalhit
+User-agent: Twitterbot
+User-agent: LinkedInBot
+Allow: /
+
+# Block OpenAI SearchBot (if you don't want ChatGPT indexing)
+User-agent: OAI-SearchBot
+Disallow: /
+
+# Block SEO/marketing crawlers
+User-agent: SemrushBot
+User-agent: AhrefsBot
+User-agent: MJ12bot
+User-agent: DotBot
+Disallow: /
+
+# Block everything else by default
+User-agent: *
+Disallow: /

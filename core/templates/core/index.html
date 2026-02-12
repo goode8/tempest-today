@@ -824,6 +824,15 @@
                 </div>
               </div>
 
+              {% comment %} Data Source {% endcomment %}
+              {% if current.station_full_name %}
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
+                <p style="font-size: 0.85em; color: var(--text-secondary); margin: 0;">
+                  Data from: {{ current.station_full_name }}
+                </p>
+              </div>
+              {% endif %}
+
             </div>
           </div>
         </div>

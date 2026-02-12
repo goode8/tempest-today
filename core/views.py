@@ -60,10 +60,44 @@ def index(request):
         ]
         address = random.choice(random_locations)
 
-    # Step 1: Get coordinates from address
+    # Step 1: Get coordinates from address (with geocoding cache)
+    # Cache geocoding results for 30 days to avoid hitting rate limits
+    geocode_cache_key = f"geocode_{address.lower().replace(' ', '_')}"
+    cached_geocode = cache.get(geocode_cache_key)
+    
+    if cached_geocode:
+        lat, lon, location = cached_geocode['lat'], cached_geocode['lon'], cached_geocode['location']
+    else:
+        try:
+            lat, lon, location = weather_service.get_location_coordinates(address)
+            
+            # Cache the geocoding result for 30 days
+            if location:
+                cache.set(geocode_cache_key, {
+                    'lat': lat,
+                    'lon': lon,
+                    'location': location
+                }, 2592000)  # 30 days
+        except (GeocoderTimedOut, GeocoderServiceError):
+            return render(request, "core/index.html", {
+                "error_message": "Our location service is temporarily busy. Please try again in a moment.",
+                "error_type": "timeout",
+                "unit": unit
+            })
+        except Exception as e:
+            # Log the error for debugging
+            print(f"ERROR in weather lookup: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+            return render(request, "core/index.html", {
+                "error_message": "Something went wrong. Please try again.",
+                "error_type": "general",
+                "unit": unit
+            })
+    
+    # Check if location was found
     try:
-        lat, lon, location = weather_service.get_location_coordinates(address)
-        # lat, lon, location = weather_service.get_location_coordinates(address)
 
         if not location:
             return render(request, "core/index.html", {
@@ -84,19 +118,9 @@ def index(request):
                     "error_type": "international",
                     "unit": unit
                 })
-        
-    except (GeocoderTimedOut, GeocoderServiceError):
-        return render(request, "core/index.html", {
-            "error_message": "Our location service is temporarily busy. Please try again in a moment.",
-            "error_type": "timeout",
-            "unit": unit
-        })
-    except Exception as e:
-        return render(request, "core/index.html", {
-            "error_message": "Something went wrong. Please try again.",
-            "error_type": "general",
-            "unit": unit
-        })
+    except AttributeError:
+        # Cached location object might not have 'raw' attribute
+        pass
 
     # Check cache first (round coordinates to 2 decimal places for cache key)
     cache_key = f"weather_{round(lat, 2)}_{round(lon, 2)}"
