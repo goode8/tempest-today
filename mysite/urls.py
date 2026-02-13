@@ -1,27 +1,40 @@
-"""
-URL configuration for mysite project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-
 from django.http import HttpResponse
 from django.urls import path
 from core.views import index
-from django.urls import path, include
 
+def robots_txt(request):
+    lines = [
+        "# Allow major search engines",
+        "User-agent: Googlebot",
+        "User-agent: Bingbot",
+        "User-agent: Slurp",
+        "User-agent: DuckDuckBot",
+        "Allow: /",
+        "",
+        "# Allow social media crawlers",
+        "User-agent: facebookexternalhit",
+        "User-agent: Twitterbot",
+        "User-agent: LinkedInBot",
+        "Allow: /",
+        "",
+        "# Allow OpenAI SearchBot",
+        "User-agent: OAI-SearchBot",
+        "Allow: /",
+        "",
+        "# Block SEO crawlers",
+        "User-agent: SemrushBot",
+        "User-agent: AhrefsBot",
+        "User-agent: MJ12bot",
+        "User-agent: DotBot",
+        "Disallow: /",
+        "",
+        "# Block everything else",
+        "User-agent: *",
+        "Disallow: /",
+    ]
+    return HttpResponse("\n".join(lines), content_type="text/plain")
 
 urlpatterns = [
     path("", index, name="index"),
-    path("robots.txt", robots_txt),
+    path("robots.txt", robots_txt),  # Uncomment this line
 ]
