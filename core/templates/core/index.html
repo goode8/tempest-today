@@ -352,6 +352,29 @@
         <button type="button" class="temp-toggle {% if unit == 'F' or not unit %}active{% endif %}" data-unit="F">°F</button>
         <button type="button" class="temp-toggle {% if unit == 'C' %}active{% endif %}" data-unit="C">°C</button>
       </div>
+
+      {% if forecasts %}
+      <button type="button"
+              id="quickLookBtn"
+              onclick="toggleCompactView()"
+              style="
+                background: transparent;
+                border: 2px solid #667eea;
+                color: #667eea;
+                padding: 10px 18px;
+                border-radius: 50px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 0.9em;
+                transition: all 0.2s;
+                white-space: nowrap;
+              "
+              onmouseover="this.style.background='linear-gradient(135deg,#667eea 0%,#764ba2 100%)';this.style.color='white'"
+              onmouseout="this.style.background='transparent';this.style.color='#667eea'">
+        ☂️ Quick Look
+      </button>
+      {% endif %}
+
     </form>
     <br />
 
@@ -927,6 +950,15 @@
         </div>
 
       </div>
+
+      <!-- Compact view container — hidden by default, shown by Quick Look button -->
+      <div id="compactViewContainer"
+           style="display:none; margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; background: var(--bg-secondary);">
+        <div id="compactViewContent">
+          <div style="text-align:center; padding:20px; color: var(--text-secondary);">Loading...</div>
+        </div>
+      </div>
+
       {% endif %}
     </div>
 
@@ -1377,6 +1409,57 @@
           });
         });
       });
+    </script>
+
+    <script>
+      // ── Quick Look / Compact View ──────────────────────────
+      let compactViewLoaded = false;
+      let compactViewVisible = false;
+
+      function toggleCompactView() {
+        const container = document.getElementById('compactViewContainer');
+        const btn = document.getElementById('quickLookBtn');
+        const weatherGrid = document.querySelector('.weather-grid');
+
+        if (!compactViewVisible) {
+          container.style.display = 'block';
+          weatherGrid.style.display = 'none';
+          btn.textContent = '← Full View';
+          compactViewVisible = true;
+          if (!compactViewLoaded) {
+            loadCompactView();
+          }
+        } else {
+          container.style.display = 'none';
+          weatherGrid.style.display = '';
+          btn.textContent = '☂️ Quick Look';
+          compactViewVisible = false;
+        }
+      }
+
+      function loadCompactView() {
+        const address = '{{ address|escapejs }}';
+        const unit = document.getElementById('unit-input').value;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('/compact/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken,
+          },
+          body: `address=${encodeURIComponent(address)}&unit=${encodeURIComponent(unit)}`
+        })
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById('compactViewContent').innerHTML = html;
+          compactViewLoaded = true;
+        })
+        .catch(() => {
+          document.getElementById('compactViewContent').innerHTML =
+            '<p style="color:var(--text-secondary); text-align:center;">Could not load quick view. Please try again.</p>';
+        });
+      }
     </script>
 
     <script>

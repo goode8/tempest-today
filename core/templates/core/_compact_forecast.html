@@ -1,0 +1,413 @@
+{% load static %}
+
+{% if error %}
+  <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+    ⚠️ {{ error }}
+  </div>
+
+{% else %}
+
+<style>
+  /* ── Shared ─────────────────────────────────────────── */
+  .compact-header {
+    margin-bottom: 14px;
+  }
+
+  .compact-header h2 {
+    margin: 0;
+    font-size: 1.1em;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .umbrella-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95em;
+    line-height: 1.4;
+  }
+
+  .clear-banner {
+    background: linear-gradient(135deg, #43a047 0%, #1b5e20 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95em;
+    line-height: 1.4;
+  }
+
+  .snow-banner {
+    background: linear-gradient(135deg, #90caf9 0%, #64b5f6 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95em;
+    line-height: 1.4;
+  }
+
+  .banner-emoji {
+    font-family: 'Noto Color Emoji', sans-serif;
+    font-size: 1.6em;
+    flex-shrink: 0;
+  }
+
+  /* ── Desktop: Table ─────────────────────────────────── */
+  .compact-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+  }
+
+  .compact-table th {
+    text-align: left;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .compact-table td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+
+  .compact-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .compact-table tr:hover td {
+    background: var(--card-bg);
+  }
+
+  .compact-day-label {
+    font-weight: 600;
+    min-width: 100px;
+  }
+
+  .compact-icon {
+    font-family: 'Noto Color Emoji', sans-serif;
+    font-size: 1.4em;
+    text-align: center;
+    width: 40px;
+  }
+
+  .compact-high { font-weight: 600; }
+  .compact-low  { color: var(--text-secondary); font-size: 0.9em; }
+
+  .precip-high { color: #1565c0; font-weight: 600; }
+  .precip-med  { color: #0288d1; }
+  .precip-low  { color: var(--text-secondary); }
+
+  .umbrella-icon {
+    font-family: 'Noto Color Emoji', sans-serif;
+    font-size: 1.1em;
+    text-align: center;
+  }
+
+  /* ── Mobile: Cards ──────────────────────────────────── */
+  .compact-cards {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .compact-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .cc-day {
+    font-weight: 600;
+    font-size: 0.95em;
+    min-width: 72px;
+    color: var(--text-primary);
+  }
+
+  .cc-icon {
+    font-family: 'Noto Color Emoji', sans-serif;
+    font-size: 1.5em;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .cc-temps {
+    flex: 1;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .cc-high {
+    font-weight: 700;
+    font-size: 1.05em;
+    color: var(--text-primary);
+  }
+
+  .cc-low {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+  }
+
+  .cc-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    min-width: 52px;
+  }
+
+  .cc-precip {
+    font-size: 0.88em;
+    font-weight: 500;
+  }
+
+  .cc-umbrella {
+    font-family: 'Noto Color Emoji', sans-serif;
+    font-size: 1.1em;
+    min-height: 1.2em;
+  }
+
+  /* ── Responsive switch ──────────────────────────────── */
+  @media (max-width: 600px) {
+    .compact-table  { display: none; }
+    .compact-cards  { display: flex; }
+  }
+</style>
+
+<div class="compact-header">
+  <h2>7-Day Quick Look</h2>
+</div>
+
+{% if any_umbrella or any_snow or active_alerts %}
+<div style="display:flex; gap:6px; margin-bottom:16px;">
+
+  {% if any_umbrella %}
+  <div style="flex:1; min-width:0; background:var(--card-bg); border:1px solid var(--border-color); border-left:3px solid #667eea; border-radius:8px; padding:8px 12px; display:flex; align-items:center; gap:8px; font-size:0.88em; color:var(--text-primary);">
+    <span style="font-family:'Noto Color Emoji',sans-serif; font-size:1.3em; flex-shrink:0;">☂️</span>
+    <span><strong>Pack an umbrella.</strong></span>
+  </div>
+  {% endif %}
+
+  {% if any_snow %}
+  <div style="flex:1; min-width:0; background:var(--card-bg); border:1px solid var(--border-color); border-left:3px solid #5c9bd4; border-radius:8px; padding:8px 12px; display:flex; align-items:center; gap:8px; font-size:0.88em; color:var(--text-primary);">
+    <span style="font-family:'Noto Color Emoji',sans-serif; font-size:1.3em; flex-shrink:0;">🥾</span>
+    <span><strong>Grab your boots.</strong></span>
+  </div>
+  {% endif %}
+
+  {% for alert in active_alerts %}
+  <div style="flex:1; min-width:0; background:var(--card-bg); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.88em; overflow:hidden; transition:opacity 0.15s;
+    {% if alert.severity|lower == 'extreme' %}border-left:3px solid #c62828;
+    {% elif alert.severity|lower == 'severe' %}border-left:3px solid #e64a19;
+    {% elif alert.severity|lower == 'moderate' %}border-left:3px solid #f57c00;
+    {% else %}border-left:3px solid #1565c0;
+    {% endif %}"
+       onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"
+       onclick="openAlertModal(this)"
+       data-alert-event="{{ alert.event }}"
+       data-alert-severity="{{ alert.severity }}"
+       data-alert-headline="{{ alert.headline }}"
+       data-alert-description="{{ alert.description|escapejs }}"
+       data-alert-instruction="{{ alert.instruction|default:'No specific instructions provided.'|escapejs }}"
+       data-alert-urgency="{{ alert.urgency }}"
+       data-alert-lat="{{ lat }}"
+       data-alert-lon="{{ lon }}">
+    <span style="font-family:'Noto Color Emoji',sans-serif; font-size:1.3em; flex-shrink:0;">⚠️</span>
+    <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; color:var(--text-primary);">{{ alert.event }}</span>
+  </div>
+  {% endfor %}
+
+</div>
+{% else %}
+<div class="clear-banner">
+  <span class="banner-emoji">✅</span>
+  <span><strong>All clear.</strong> No rain or snow expected this week.</span>
+</div>
+{% endif %}
+
+{# ── DESKTOP: table ────────────────────────────────────── #}
+<table class="compact-table">
+  <thead>
+    <tr>
+      <th>Day</th>
+      <th></th>
+      <th>High / Low</th>
+      <th>Precip</th>
+      <th>☂️/🥾</th>
+      <th>Conditions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for day in days %}
+    <tr>
+      <td class="compact-day-label">{{ day.label }}</td>
+
+      <td class="compact-icon">
+        {% with f=day.short_forecast|lower %}
+          {% if "thunder" in f %}⛈️
+          {% elif "snow" in f %}❄️
+          {% elif "sleet" in f or "hail" in f %}🌨️
+          {% elif "heavy rain" in f %}🌧️
+          {% elif "rain" in f or "shower" in f or "drizzle" in f %}🌦️
+          {% elif "fog" in f or "haze" in f %}🌫️
+          {% elif "wind" in f or "breezy" in f %}💨
+          {% elif "mostly cloudy" in f or "partly sunny" in f %}⛅
+          {% elif "partly cloudy" in f or "mostly sunny" in f %}🌤️
+          {% elif "cloudy" in f or "overcast" in f %}☁️
+          {% elif "sunny" in f or "clear" in f %}☀️
+          {% else %}🌤️
+          {% endif %}
+        {% endwith %}
+      </td>
+
+      <td>
+        <span class="compact-high" data-temp="{{ day.high|default:'' }}">
+          {% if day.high %}{{ day.high }}°{% else %}–{% endif %}
+        </span>
+        <span class="compact-low">
+          &nbsp;/&nbsp;
+          <span data-temp="{{ day.low|default:'' }}">
+            {% if day.low %}{{ day.low }}°{% else %}–{% endif %}
+          </span>
+        </span>
+      </td>
+
+      <td>
+        {% if day.precip is not None %}
+          <span class="{% if day.precip >= 60 %}precip-high{% elif day.precip >= 30 %}precip-med{% else %}precip-low{% endif %}">
+            {{ day.precip }}%
+          </span>
+          {% if day.precip_label %}
+            <div style="font-size:0.75em; color:var(--text-secondary); margin-top:1px;">{{ day.precip_label }}</div>
+          {% endif %}
+        {% else %}
+          <span class="precip-low">–</span>
+        {% endif %}
+      </td>
+
+      <td class="umbrella-icon">
+        {# prefer emoji based on the text, fall back to flags #}
+        {% with f=day.short_forecast|lower %}
+          {% if "snow" in f or day.snow %}
+            {% if "rain" in f or "shower" in f or "drizzle" in f or day.umbrella %}
+              ☂️🥾
+            {% else %}
+              🥾
+            {% endif %}
+          {% elif "rain" in f or "shower" in f or "drizzle" in f or day.umbrella %}
+            ☂️
+          {% else %}
+            <span style="color:var(--text-secondary);font-size:0.8em;">–</span>
+          {% endif %}
+        {% endwith %}
+       </td>
+
+      <td style="color: var(--text-secondary); font-size: 0.88em;">
+        {{ day.short_forecast }}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6" style="text-align:center; color: var(--text-secondary); padding: 20px;">
+        No forecast data available.
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+{# ── MOBILE: stacked cards ─────────────────────────────── #}
+<div class="compact-cards">
+
+  <!-- Single header row -->
+  <div style="display:flex; justify-content:space-between; padding: 0 14px 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 4px;">
+    <span style="font-size:0.75em; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; min-width:72px;">Day</span>
+    <span style="font-size:0.75em; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; flex:1; text-align:center;">High / Low</span>
+    <span style="font-size:0.75em; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; min-width:52px; text-align:right;">Precip</span>
+  </div>
+
+  {% for day in days %}
+  <div class="compact-card">
+
+    <div class="cc-day">{{ day.label }}</div>
+
+    <div class="cc-icon">
+      {% with f=day.short_forecast|lower %}
+        {% if "thunder" in f %}⛈️
+        {% elif "snow" in f %}❄️
+        {% elif "sleet" in f or "hail" in f %}🌨️
+        {% elif "heavy rain" in f %}🌧️
+        {% elif "rain" in f or "shower" in f or "drizzle" in f %}🌦️
+        {% elif "fog" in f or "haze" in f %}🌫️
+        {% elif "wind" in f or "breezy" in f %}💨
+        {% elif "mostly cloudy" in f or "partly sunny" in f %}⛅
+        {% elif "partly cloudy" in f or "mostly sunny" in f %}🌤️
+        {% elif "cloudy" in f or "overcast" in f %}☁️
+        {% elif "sunny" in f or "clear" in f %}☀️
+        {% else %}🌤️
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <div class="cc-temps">
+      <div class="cc-high" data-temp="{{ day.high|default:'' }}">
+        {% if day.high %}{{ day.high }}°{% else %}–{% endif %}
+      </div>
+      <div class="cc-low" data-temp="{{ day.low|default:'' }}">
+        {% if day.low %}{{ day.low }}°{% else %}–{% endif %}
+      </div>
+    </div>
+
+    <div class="cc-right">
+      <span class="cc-precip {% if day.precip is not None %}{% if day.precip >= 60 %}precip-high{% elif day.precip >= 30 %}precip-med{% else %}precip-low{% endif %}{% endif %}">
+        {% if day.precip is not None %}{{ day.precip }}%{% else %}–{% endif %}
+      </span>
+      {% if day.precip_label %}
+        <span style="font-size:0.75em; color:var(--text-secondary);">{{ day.precip_label }}</span>
+      {% endif %}
+      <span class="cc-umbrella">
+        {% with f=day.short_forecast|lower %}
+          {% if "snow" in f or day.snow %}
+            {% if "rain" in f or "shower" in f or "drizzle" in f or day.umbrella %}
+              ☂️🥾
+            {% else %}
+              🥾
+            {% endif %}
+          {% elif "rain" in f or "shower" in f or "drizzle" in f or day.umbrella %}
+            ☂️
+          {% endif %}
+        {% endwith %}
+       </span>
+    </div>
+
+  </div>
+  {% empty %}
+  <p style="text-align:center; color: var(--text-secondary);">No forecast data available.</p>
+  {% endfor %}
+</div>
+
+{% endif %}

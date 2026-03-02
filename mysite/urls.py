@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 from django.urls import path
-from core.views import index
+from core.views import index, compact_forecast
 
 def robots_txt(request):
     lines = [
@@ -36,5 +36,6 @@ def robots_txt(request):
 
 urlpatterns = [
     path("", index, name="index"),
+    path("compact/", compact_forecast, name="compact_forecast"),
     path("robots.txt", robots_txt),
 ]
