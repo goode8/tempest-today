@@ -36,5 +36,5 @@ def robots_txt(request):
 
 urlpatterns = [
     path("", index, name="index"),
-    path("robots.txt", robots_txt),  # Uncomment this line
+    path("robots.txt", robots_txt),
 ]

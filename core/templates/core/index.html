@@ -8,7 +8,7 @@
   <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway" />
-  
+
   <style>
     p1,
     p2 {
@@ -129,45 +129,45 @@
     button[type="submit"]:active {
       transform: scale(0.95);
     }
-    
+
     /* NWS link button hover effect */
     #alertModalNWSLink:hover {
       transform: scale(1.05);
       box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     }
-    
+
     @media (max-width: 768px) {
       form {
         flex-direction: column !important;
         gap: 12px !important;
       }
-      
+
         input[type="text"] {
           width: 100% !important;
           max-width: 400px;
           padding: 12px;
           font-size: 16px; /* Prevents zoom on iOS */
         }
-        
+
         button[type="submit"] {
           width: 100%;
           max-width: 400px;
         }
-        
+
         .minimal-toggle {
           margin-left: 0 !important;
         }
-        
+
         .weather-grid {
           grid-template-columns: 1fr !important;
           gap: 12px;
         }
-        
+
         .weather-icon-container {
           font-size: 2.5em;
           padding: 12px;
         }
-        
+
         .forecast-card {
           padding: 20px 16px;
         }
@@ -177,11 +177,11 @@
         .weather-icon-container {
           font-size: 2em;
         }
-        
+
         .forecast-card h3 {
           font-size: 1.1em;
         }
-        
+
         /* Remove extra spacing on mobile */
         form + br {
           display: none;
@@ -304,17 +304,17 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
-    
+
     .alert-container {
       transition: all 0.3s ease;
     }
-    
+
     .alert-container:hover {
       transform: translateY(-3px);
       box-shadow: 0 6px 20px rgba(211, 47, 47, 0.3);
       border-color: #b71c1c;
     }
-    
+
     .alert-item:hover {
       background-color: rgba(211, 47, 47, 0.08);
     }
@@ -325,11 +325,11 @@
         max-height: 100vh;
         border-radius: 0;
       }
-      
+
       .modal-overlay {
         padding: 0;
       }
-      
+
       .modal-data-grid {
         grid-template-columns: 1fr;
       }
@@ -347,7 +347,7 @@
       <input type="text" name="address" placeholder="Enter ZIP Code or City&State" />
       <input type="hidden" name="unit" id="unit-input" value="{{ unit|default:'F' }}" />
       <button type="submit">Check Weather</button>
-      
+
       <div class="minimal-toggle">
         <button type="button" class="temp-toggle {% if unit == 'F' or not unit %}active{% endif %}" data-unit="F">°F</button>
         <button type="button" class="temp-toggle {% if unit == 'C' %}active{% endif %}" data-unit="C">°C</button>
@@ -362,7 +362,7 @@
         {% else %}
           background: #fff3cd; color: #856404; border: 2px solid #ffc107;
         {% endif %}">
-        
+
         {% if error_type == 'international' %}
           <div style="font-size: 4em; margin-bottom: 10px;">🌍</div>
           <h2 style="margin-top: 0; font-size: 1.8em;">International Weather Coming Soon!</h2>
@@ -384,8 +384,8 @@
       {% endif %}
 
     {% if show_random_location_message %}
-      <div style="max-width: 500px; margin: 20px auto; padding: 20px; border-radius: 12px; text-align: center; 
-                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; 
+      <div style="max-width: 500px; margin: 20px auto; padding: 20px; border-radius: 12px; text-align: center;
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;
                   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
         <div style="font-size: 2em; margin-bottom: 8px;">🎲</div>
         <h3 style="margin-top: 0; font-size: 1.2em;">Please enter a location above</h3>
@@ -404,8 +404,24 @@
     <p style="text-align: center; color: #6b7280; font-size: 0.95em; margin: 24px 0;">
       Closest Weather Station: {{current.station_full_name}}
     </p>
+
+    <div style="text-align: center; margin: -10px 0 20px 0;">
+      <a href="#support" style="
+        color: var(--text-secondary);
+        font-size: 0.78em;
+        text-decoration: none;
+        border: 1px solid var(--border-color);
+        padding: 4px 14px;
+        border-radius: 20px;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+      " onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+        ☕ Support Tempest Today
+      </a>
+    </div>
+
     <div class="weather-grid">
-      
+
       {% with period=forecasts.0 %}
         <div class="forecast-card current-hightlight clickable-card" onclick="openCurrentWeatherModal()" style="cursor: pointer;">
           <h3>{% if current.temp %}Current Conditions{% else %}{{ period.name }}{% endif %}</h3>
@@ -445,7 +461,7 @@
               <span style="font-size: 0.9em; color: var(--text-secondary);">Temp unavailable</span>
             {% endif %}
           </p>
-          
+
           <p class="desc">
             {% if current.description %}
               {{ current.description }}
@@ -477,7 +493,7 @@
               <div class="alert-container" style="background-color: var(--alert-bg, #fff3f3); border: 2px solid #d32f2f; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                 <h3 style="color: #d32f2f; margin-top: 0;">⚠️ Active Weather Alerts</h3>
                 {% for alert in current.active_alerts %}
-                  <div class="alert-item clickable-card" 
+                  <div class="alert-item clickable-card"
                        style="margin-bottom: 10px; padding: 12px; cursor: pointer; transition: all 0.2s; border-radius: 6px;"
                        onclick="openAlertModal(this)"
                        data-alert-event="{{ alert.event }}"
@@ -510,7 +526,7 @@
             <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 10px 0;"></div>
             <br>
             <p style="font-weight: bold; color: #ffffff;">Sunrise & Sunset</p>
-            
+
             <div style="display: flex; justify-content: center; margin-top: 1px; font-size: 0.85em; color: #ffffff;">
               <span>{{ current.sunrise }}</span>
                 &nbsp;
@@ -523,8 +539,8 @@
 
         {% for period in forecasts %}
 
-          <div class="forecast-card clickable-card" 
-               onclick="openForecastModal(this)" 
+          <div class="forecast-card clickable-card"
+               onclick="openForecastModal(this)"
                style="cursor: pointer;"
                data-period-name="{{ period.name }}"
                data-period-temp="{{ period.temperature }}"
@@ -540,10 +556,10 @@
 
             <div class="weather-icon-container">
               {% with forecast=period.shortForecast|lower %}
-              
+
               {# === SEVERE WEATHER (shown day or night) === #}
               {% if "thunderstorm" in forecast %}<span>⛈️</span>{% endif %}
-              
+
               {# === PRECIPITATION (check snow first, then rain) === #}
               {% if "snow" in forecast %}
                 <span>❄️</span>
@@ -562,7 +578,7 @@
                 {# Night precipitation - rain only #}
                 <span>🌧️</span>
               {% endif %}
-              
+
               {# === SKY CONDITIONS === #}
               {% if period.isDaytime %}
                 {# Day sky conditions #}
@@ -587,11 +603,11 @@
                   <span>⭐</span>
                 {% endif %}
               {% endif %}
-              
+
               {# === VISIBILITY & WIND === #}
               {% if "fog" in forecast or "haze" in forecast %}<span>🌫️</span>{% endif %}
               {% if "windy" in forecast or "breezy" in forecast %}<span>💨</span>{% endif %}
-              
+
               {% endwith %}
             </div>
 
@@ -607,7 +623,7 @@
               <span style="font-size: 0.9em; color: var(--text-secondary);">Temp unavailable</span>
             {% endif %}
             </p>
-            
+
             <p class="desc" style="font-size: 0.9em; margin: 5px 0;">
               {{ period.shortForecast }}
             </p>
@@ -642,7 +658,7 @@
               </div>
             </div>
             <div class="modal-body">
-              
+
               {% comment %} Current Temp & Description {% endcomment %}
               <div class="modal-section">
                 <div style="text-align: center;">
@@ -724,7 +740,7 @@
                     <div class="modal-data-value">{{ current.humidity }}%</div>
                   </div>
                   {% endif %}
-                  
+
                   {% comment %} Wind - show from current or fallback to forecast {% endcomment %}
                   {% if current.wind_speed_mph is not None or forecasts.0.windSpeed %}
                   <div class="modal-data-item">
@@ -740,7 +756,7 @@
                     </div>
                   </div>
                   {% endif %}
-                  
+
                   {% if current.precip_1h is not None %}
                   <div class="modal-data-item">
                     <div class="modal-data-label">Precipitation (Last Hour)</div>
@@ -783,7 +799,7 @@
               </div>
             </div>
             <div class="modal-body">
-              
+
               {% comment %} Temperature & Icon {% endcomment %}
               <div class="modal-section">
                 <div style="text-align: center;">
@@ -811,12 +827,12 @@
                     <div class="modal-data-label">Wind</div>
                     <div id="forecastModalWind" class="modal-data-value"></div>
                   </div>
-                  
+
                   <div id="forecastModalPrecipContainer" class="modal-data-item" style="display: none;">
                     <div class="modal-data-label">Chance of Precipitation</div>
                     <div id="forecastModalPrecip" class="modal-data-value"></div>
                   </div>
-                  
+
                   <div id="forecastModalHumidityContainer" class="modal-data-item" style="display: none;">
                     <div class="modal-data-label">Humidity</div>
                     <div id="forecastModalHumidity" class="modal-data-value"></div>
@@ -845,7 +861,7 @@
               <button class="modal-close" onclick="closeMoonModal()" aria-label="Close modal">×</button>
             </div>
             <div class="modal-body">
-              
+
               {% comment %} Moon Phase & Emoji {% endcomment %}
               <div class="modal-section">
                 <div style="text-align: center;">
@@ -859,7 +875,7 @@
                 </div>
               </div>
 
-              {% comment %} Moon Times - only show if data available 
+              {% comment %} Moon Times - only show if data available
               {% if current.moonrise != "N/A" or current.moonset != "N/A" or current.moon_transit != "N/A" %}
               <div class="modal-section">
                 <h4>Moon Times</h4>
@@ -913,7 +929,7 @@
       </div>
       {% endif %}
     </div>
-    
+
     <!-- Alert Details Modal -->
     <div id="alertModal" class="modal-overlay" onclick="closeModal(event)">
       <div class="modal-content" onclick="event.stopPropagation()">
@@ -930,35 +946,35 @@
             <span id="alertModalSeverity" style="display: inline-block; font-size: 0.85em; padding: 6px 12px; border-radius: 6px; background: #d32f2f; color: white; font-weight: 600; white-space: nowrap;"></span>
             <span id="alertModalUrgency" style="display: inline-block; font-size: 0.85em; padding: 6px 12px; border-radius: 6px; background: #ff9800; color: white; font-weight: 600; white-space: nowrap;"></span>
           </div>
-          
+
           <!-- Headline -->
           <div class="modal-section">
             <h4 style="color: var(--text-primary); margin-bottom: 10px;">📋 Alert Headline</h4>
             <p id="alertModalHeadline" style="color: var(--text-primary); font-weight: 500; line-height: 1.5;"></p>
           </div>
-          
+
           <!-- Description -->
           <div class="modal-section">
             <h4 style="color: var(--text-primary); margin-bottom: 10px;">📄 Description</h4>
             <p id="alertModalDescription" style="color: var(--text-primary); line-height: 1.6; white-space: pre-wrap;"></p>
           </div>
-          
+
           <!-- Instructions -->
           <div class="modal-section">
             <h4 style="color: var(--text-primary); margin-bottom: 10px;">🛡️ Safety Instructions</h4>
             <p id="alertModalInstruction" style="color: var(--text-primary); line-height: 1.6; white-space: pre-wrap;"></p>
           </div>
-          
+
           <!-- NWS Link -->
           <div style="text-align: center; margin: 20px 0;">
-            <a id="alertModalNWSLink" href="#" target="_blank" rel="noopener noreferrer" 
-               style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                      color: white; text-decoration: none; border-radius: 8px; font-weight: 600; 
+            <a id="alertModalNWSLink" href="#" target="_blank" rel="noopener noreferrer"
+               style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white; text-decoration: none; border-radius: 8px; font-weight: 600;
                       transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
               🌐 View Full Alert on NWS Website →
             </a>
           </div>
-          
+
           <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ff9800; border-radius: 4px;">
             <p style="margin: 0; color: #856404; font-size: 0.9em; line-height: 1.5;">
               <strong>⚠️ Important:</strong> Always follow official guidance from local authorities and the National Weather Service.
@@ -967,14 +983,14 @@
         </div>
       </div>
     </div>
-    
+
     <script>
       // Modal functions
       function openCurrentWeatherModal() {
         // Get current state from main page
         const mainPageUnit = document.querySelector('.temp-toggle.active').dataset.unit;
         const modalToggleButtons = document.querySelectorAll('.modal-temp-toggle');
-        
+
         // Set modal toggle buttons to match main page
         modalToggleButtons.forEach(btn => {
           if (btn.dataset.unit === mainPageUnit) {
@@ -983,39 +999,39 @@
             btn.classList.remove('active');
           }
         });
-        
+
         // Copy weather icon from main card to modal (preserves night/day logic)
         const mainIcon = document.getElementById('currentWeatherMainIcon');
         const modalIcon = document.getElementById('currentWeatherModalIcon');
         if (mainIcon && modalIcon) {
           modalIcon.innerHTML = mainIcon.innerHTML;
         }
-        
+
         // Display temps in current page unit (convert from original if needed)
         const originalUnit = '{{ unit|default:"F" }}';
-        
+
         document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
           const originalTemp = parseFloat(tempElement.dataset.originalTemp);
-          
+
           if (isNaN(originalTemp)) return;
-          
+
           let displayTemp = originalTemp;
-          
+
           // Convert from original unit to current page unit
           if (originalUnit === 'F' && mainPageUnit === 'C') {
             displayTemp = Math.round((originalTemp - 32) * 5 / 9);
           } else if (originalUnit === 'C' && mainPageUnit === 'F') {
             displayTemp = Math.round((originalTemp * 9 / 5) + 32);
           }
-          
+
           tempElement.textContent = displayTemp + '°';
         });
-        
+
         // Update unit labels to match current page
         document.querySelectorAll('.modal-temp-unit').forEach(unitElement => {
           unitElement.textContent = mainPageUnit;
         });
-        
+
         document.getElementById('currentWeatherModal').classList.add('active');
         document.body.style.overflow = 'hidden';
       }
@@ -1050,7 +1066,7 @@
         const urgency = alertElement.dataset.alertUrgency;
         const lat = alertElement.dataset.alertLat;
         const lon = alertElement.dataset.alertLon;
-        
+
         // Decode Unicode escapes in alert text (e.g., \u000A to newline, \u002D to -)
         const decodeUnicode = (text) => {
           if (!text) return text;
@@ -1058,10 +1074,10 @@
             return String.fromCharCode(parseInt(match.replace(/\\u/g, ''), 16));
           });
         };
-        
+
         const decodedDescription = decodeUnicode(description);
         const decodedInstruction = decodeUnicode(instruction);
-        
+
         // Populate modal
         document.getElementById('alertModalEvent').textContent = event;
         document.getElementById('alertModalSeverity').textContent = severity;
@@ -1069,7 +1085,7 @@
         document.getElementById('alertModalHeadline').textContent = headline;
         document.getElementById('alertModalDescription').textContent = decodedDescription || 'No additional description available.';
         document.getElementById('alertModalInstruction').textContent = decodedInstruction || 'No specific instructions provided.';
-        
+
         // Build NWS forecast URL from lat/lon
         const nwsLink = document.getElementById('alertModalNWSLink');
         if (lat && lon) {
@@ -1079,7 +1095,7 @@
         } else {
           nwsLink.style.display = 'none';
         }
-        
+
         // Open modal
         document.getElementById('alertModal').classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -1111,27 +1127,27 @@
         const humidity = cardElement.dataset.periodHumidity;
         const tempTrend = cardElement.dataset.periodTempTrend;
         const isDaytime = cardElement.dataset.periodIsDay === 'True';
-        
+
         // Get main page unit
         const mainPageUnit = document.querySelector('.temp-toggle.active').dataset.unit;
         const originalUnit = '{{ unit|default:"F" }}';
-        
+
         // Decode Unicode escapes in detailedForecast (e.g., \u002D to -)
         const decodedForecast = detailedForecast.replace(/\\u[\dA-F]{4}/gi, (match) => {
           return String.fromCharCode(parseInt(match.replace(/\\u/g, ''), 16));
         });
-        
+
         // Populate modal
         document.getElementById('forecastModalTitle').textContent = name;
         document.getElementById('forecastModalShortForecast').textContent = shortForecast;
         document.getElementById('forecastModalDetailed').textContent = decodedForecast;
-        
+
         // Temperature with conversion
         const tempElement = document.getElementById('forecastModalTemp');
         tempElement.dataset.temp = temp;
         tempElement.dataset.originalTemp = temp;
         tempElement.dataset.originalUnit = originalUnit;
-        
+
         let displayTemp = parseInt(temp);
         if (mainPageUnit === 'C' && originalUnit === 'F') {
           displayTemp = Math.round((displayTemp - 32) * 5 / 9);
@@ -1139,7 +1155,7 @@
           displayTemp = Math.round((displayTemp * 9 / 5) + 32);
         }
         tempElement.textContent = displayTemp + '°';
-        
+
         // Temperature trend
         const trendElement = document.getElementById('forecastModalTempTrend');
         if (tempTrend && tempTrend !== 'None') {
@@ -1148,7 +1164,7 @@
         } else {
           trendElement.style.display = 'none';
         }
-        
+
         // Sync toggle buttons with main page
         document.querySelectorAll('.forecast-modal-temp-toggle').forEach(btn => {
           if (btn.dataset.unit === mainPageUnit) {
@@ -1158,15 +1174,15 @@
           }
         });
         document.getElementById('forecastModalTempUnit').textContent = mainPageUnit;
-        
+
         // Set weather icon (copy from card)
         const iconHTML = cardElement.querySelector('.weather-icon-container').innerHTML;
         document.getElementById('forecastModalIcon').innerHTML = iconHTML;
-        
+
         // Wind
-        document.getElementById('forecastModalWind').textContent = 
+        document.getElementById('forecastModalWind').textContent =
           windSpeed && windSpeed !== 'None' ? `${windSpeed} ${windDir}` : 'Calm';
-        
+
         // Precipitation (only show if available)
         const precipContainer = document.getElementById('forecastModalPrecipContainer');
         if (precip && precip !== '') {
@@ -1175,7 +1191,7 @@
         } else {
           precipContainer.style.display = 'none';
         }
-        
+
         // Humidity (only show if available)
         const humidityContainer = document.getElementById('forecastModalHumidityContainer');
         if (humidity && humidity !== '') {
@@ -1184,7 +1200,7 @@
         } else {
           humidityContainer.style.display = 'none';
         }
-        
+
         // Open modal
         document.getElementById('forecastModal').classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -1205,21 +1221,21 @@
         button.addEventListener('click', function() {
           const newUnit = this.dataset.unit;
           const currentUnit = document.querySelector('.modal-temp-toggle.active').dataset.unit;
-          
+
           // Don't do anything if clicking the same unit
           if (newUnit === currentUnit) return;
-          
+
           // Remove active class from all modal toggle buttons
           document.querySelectorAll('.modal-temp-toggle').forEach(btn => {
             btn.classList.remove('active');
           });
-          
+
           // Add active class to clicked button
           this.classList.add('active');
-          
+
           // Store original unit if not already stored
           const originalUnit = '{{ unit|default:"F" }}';
-          
+
           // Convert all temperatures in the MODAL only
           document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
             // Get the original temperature value (store it first time)
@@ -1227,17 +1243,17 @@
               tempElement.dataset.originalTemp = tempElement.dataset.temp;
               tempElement.dataset.originalUnit = originalUnit;
             }
-            
+
             let originalTemp = parseFloat(tempElement.dataset.originalTemp);
-            
+
             // Skip if originalTemp is NaN
             if (isNaN(originalTemp)) {
               return;
             }
-            
+
             let originalTempUnit = tempElement.dataset.originalUnit;
             let displayTemp;
-            
+
             // Always convert from the original value
             if (originalTempUnit === 'F') {
               if (newUnit === 'C') {
@@ -1252,11 +1268,11 @@
                 displayTemp = Math.round(originalTemp);
               }
             }
-            
+
             // Update display
             tempElement.textContent = displayTemp + '°';
           });
-          
+
           // Update all unit labels in modal
           document.querySelectorAll('.modal-temp-unit').forEach(unitElement => {
             unitElement.textContent = newUnit;
@@ -1269,40 +1285,40 @@
         button.addEventListener('click', function() {
           const newUnit = this.dataset.unit;
           const currentUnit = document.querySelector('.forecast-modal-temp-toggle.active').dataset.unit;
-          
+
           if (newUnit === currentUnit) return;
-          
+
           document.querySelectorAll('.forecast-modal-temp-toggle').forEach(btn => {
             btn.classList.remove('active');
           });
-          
+
           this.classList.add('active');
-          
+
           const originalUnit = '{{ unit|default:"F" }}';
-          
+
           // Convert temperature in forecast modal
           const tempElement = document.getElementById('forecastModalTemp');
           if (!tempElement.dataset.originalTemp) {
             tempElement.dataset.originalTemp = tempElement.dataset.temp;
             tempElement.dataset.originalUnit = originalUnit;
           }
-          
+
           let originalTemp = parseFloat(tempElement.dataset.originalTemp);
-          
+
           // Skip if originalTemp is NaN
           if (isNaN(originalTemp)) {
             return;
           }
-          
+
           let originalTempUnit = tempElement.dataset.originalUnit;
           let displayTemp;
-          
+
           if (originalTempUnit === 'F') {
             displayTemp = newUnit === 'C' ? Math.round((originalTemp - 32) * 5 / 9) : Math.round(originalTemp);
           } else {
             displayTemp = newUnit === 'F' ? Math.round((originalTemp * 9 / 5) + 32) : Math.round(originalTemp);
           }
-          
+
           tempElement.textContent = displayTemp + '°';
           document.getElementById('forecastModalTempUnit').textContent = newUnit;
         });
@@ -1313,30 +1329,30 @@
         button.addEventListener('click', function() {
           const newUnit = this.dataset.unit;
           const currentUnit = document.querySelector('.temp-toggle.active').dataset.unit;
-          
+
           // Don't do anything if clicking the same unit
           if (newUnit === currentUnit) return;
-          
+
           // Remove active class from all buttons
           document.querySelectorAll('.temp-toggle').forEach(btn => {
             btn.classList.remove('active');
           });
-          
+
           // Add active class to clicked button
           this.classList.add('active');
-          
+
           // Update hidden input
           document.getElementById('unit-input').value = newUnit;
-          
+
           // Convert all temperatures on the page
           document.querySelectorAll('[data-temp]').forEach(tempElement => {
             let temp = parseFloat(tempElement.dataset.temp);
-            
+
             // Skip if temp is NaN (e.g., from "N/A" or invalid data)
             if (isNaN(temp)) {
               return;
             }
-            
+
             if (newUnit === 'C') {
               // Convert F to C
               temp = Math.round((temp - 32) * 5 / 9);
@@ -1344,7 +1360,7 @@
               // Convert C to F
               temp = Math.round((temp * 9 / 5) + 32);
             }
-            
+
               // Check if this element has a temp-unit span (current conditions only)
               const unitSpan = tempElement.querySelector('.temp-unit');
               if (unitSpan) {
@@ -1354,20 +1370,20 @@
                 // Update display without unit (forecast cards)
                 tempElement.textContent = temp + '° ';
               }
-              
+
               // Update stored value for next conversion
               tempElement.dataset.temp = temp;
-            
+
           });
         });
       });
     </script>
-    
+
     <script>
       // Store original temperatures on page load BEFORE any user interactions
       document.addEventListener('DOMContentLoaded', function() {
         const originalUnit = '{{ unit|default:"F" }}';
-        
+
         // Store originals for modal temp displays
         document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
           const originalTemp = tempElement.dataset.temp;
