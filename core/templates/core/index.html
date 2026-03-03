@@ -8,6 +8,8 @@
   <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     p1,
@@ -357,21 +359,18 @@
       <button type="button"
               id="quickLookBtn"
               onclick="toggleCompactView()"
-              style="
-                background: transparent;
-                border: 2px solid #667eea;
-                color: #667eea;
-                padding: 10px 18px;
-                border-radius: 50px;
-                font-weight: 600;
-                cursor: pointer;
-                font-size: 0.9em;
-                transition: all 0.2s;
-                white-space: nowrap;
-              "
+              style="background:transparent; border:2px solid #667eea; color:#667eea; padding:10px 18px; border-radius:50px; font-weight:600; cursor:pointer; font-size:0.9em; transition:all 0.2s; white-space:nowrap;"
               onmouseover="this.style.background='linear-gradient(135deg,#667eea 0%,#764ba2 100%)';this.style.color='white'"
               onmouseout="this.style.background='transparent';this.style.color='#667eea'">
         ☂️ Quick Look
+      </button>
+      <button type="button"
+              id="radarBtn"
+              onclick="toggleRadar()"
+              style="background:transparent; border:2px solid #667eea; color:#667eea; padding:10px 18px; border-radius:50px; font-weight:600; cursor:pointer; font-size:0.9em; transition:all 0.2s; white-space:nowrap;"
+              onmouseover="this.style.background='linear-gradient(135deg,#667eea 0%,#764ba2 100%)';this.style.color='white'"
+              onmouseout="this.style.background='transparent';this.style.color='#667eea'">
+        🗺️ Radar
       </button>
       {% endif %}
 
@@ -959,6 +958,15 @@
         </div>
       </div>
 
+      <!-- Radar map container — hidden by default -->
+      <div id="radarContainer" style="display:none; margin-top:8px; border:1px solid var(--border-color); border-radius:12px; overflow:hidden;">
+        <div style="padding:8px 12px; background:var(--bg-secondary); display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-size:0.8em; color:var(--text-secondary);">Live radar · updated every few minutes</span>
+          <button onclick="toggleRadar()" style="background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:4px 10px; border-radius:20px; font-size:0.78em; cursor:pointer;">← forecast</button>
+        </div>
+        <div id="radarMap" style="height:420px;"></div>
+      </div>
+
       {% endif %}
     </div>
 
@@ -1459,6 +1467,68 @@
           document.getElementById('compactViewContent').innerHTML =
             '<p style="color:var(--text-secondary); text-align:center;">Could not load quick view. Please try again.</p>';
         });
+      }
+
+      // ── Radar Map ───────────────────────────────────────────
+      let radarVisible = false;
+      let radarInitialized = false;
+      let radarMap = null;
+      let radarPrevCompactVisible = false;
+
+      function toggleRadar() {
+        const container = document.getElementById('radarContainer');
+        const btn = document.getElementById('radarBtn');
+        const weatherGrid = document.querySelector('.weather-grid');
+        const compactContainer = document.getElementById('compactViewContainer');
+        const quickLookBtn = document.getElementById('quickLookBtn');
+        radarVisible = !radarVisible;
+        if (radarVisible) {
+          radarPrevCompactVisible = compactViewVisible;
+          container.style.display = 'block';
+          if (weatherGrid) weatherGrid.style.display = 'none';
+          if (compactContainer) compactContainer.style.display = 'none';
+          if (compactViewVisible) {
+            compactViewVisible = false;
+            if (quickLookBtn) quickLookBtn.textContent = '☂️ Quick Look';
+          }
+        } else {
+          container.style.display = 'none';
+          if (radarPrevCompactVisible) {
+            if (compactContainer) compactContainer.style.display = 'block';
+            compactViewVisible = true;
+            if (quickLookBtn) quickLookBtn.textContent = '← Full View';
+          } else {
+            if (weatherGrid) weatherGrid.style.display = '';
+          }
+        }
+        btn.textContent = radarVisible ? '✕ Close Radar' : '🗺️ Radar';
+        if (radarVisible && !radarInitialized) {
+          initRadarMap();
+        } else if (radarVisible && radarMap) {
+          radarMap.invalidateSize();
+        }
+      }
+
+      function initRadarMap() {
+        radarMap = L.map('radarMap').setView([{{ lat }}, {{ lon }}], 7);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 18
+        }).addTo(radarMap);
+
+        L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png', {
+          attribution: 'NOAA/NWS via IEM',
+          opacity: 0.65,
+          transparent: true
+        }).addTo(radarMap);
+
+        L.marker([{{ lat }}, {{ lon }}])
+          .addTo(radarMap)
+          .bindPopup('{{ address|escapejs }}')
+          .openPopup();
+
+        radarInitialized = true;
       }
     </script>
 
