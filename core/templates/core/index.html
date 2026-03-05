@@ -260,6 +260,15 @@
         form + br {
           display: none;
         }
+
+        /* Shrink toggle buttons so all 3 fit on narrow screens */
+        .view-toggle-track {
+          width: 100px;
+        }
+
+        .view-toggle.details-mode .view-toggle-thumb {
+          transform: translateX(34px);
+        }
       }
 
     /* Modal styles */
@@ -1083,7 +1092,7 @@
         <div style="width: 1px; height: 40px; background: var(--border-color); margin: 0 8px; flex-shrink: 0;"></div>
 
         <!-- Sunrise -->
-        <div style="flex: 1; display: flex; align-items: center; gap: 10px; padding: 4px 6px;">
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 6px;">
           <span style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.4em; line-height: 1; flex-shrink: 0;">🌅</span>
           <div>
             <div style="font-size: 0.68em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);">Sunrise</div>
@@ -1094,7 +1103,7 @@
         <div style="width: 1px; height: 40px; background: var(--border-color); margin: 0 8px; flex-shrink: 0;"></div>
 
         <!-- Sunset -->
-        <div style="flex: 1; display: flex; align-items: center; gap: 10px; padding: 4px 6px;">
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 6px;">
           <span style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.4em; line-height: 1; flex-shrink: 0;">🌇</span>
           <div>
             <div style="font-size: 0.68em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);">Sunset</div>
