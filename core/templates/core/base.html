@@ -103,27 +103,70 @@
       font-size: 2.5em;
     }
 
-    /* Dark mode toggle button */
-    .dark-mode-toggle {
+    /* Dark/light mode toggle slider */
+    .theme-toggle {
       position: fixed;
-      top: 20px;
-      right: 20px;
-      background: var(--card-bg);
-      border: 2px solid var(--border-color);
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
+      top: 18px;
+      right: 18px;
+      background: none;
+      border: none;
+      padding: 0;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5em;
-      transition: all 0.3s ease;
       z-index: 1000;
     }
 
-    .dark-mode-toggle:hover {
-      transform: scale(1.1);
+    .toggle-track {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 7px;
+      width: 76px;
+      height: 38px;
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 19px;
+      box-sizing: border-box;
+      transition: border-color 0.3s ease, background 0.3s ease;
+    }
+
+    .toggle-sun,
+    .toggle-moon {
+      font-size: 1.1em;
+      font-family: 'Noto Color Emoji', sans-serif;
+      position: relative;
+      z-index: 2;
+      line-height: 1;
+      transition: opacity 0.25s ease;
+      user-select: none;
+    }
+
+    /* Light mode: sun active, moon dimmed */
+    .toggle-sun  { opacity: 1; }
+    .toggle-moon { opacity: 0.35; }
+
+    /* Dark mode: moon active, sun dimmed */
+    [data-theme="dark"] .toggle-sun  { opacity: 0.35; }
+    [data-theme="dark"] .toggle-moon { opacity: 1; }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      transition: transform 0.3s ease;
+      z-index: 1;
+    }
+
+    [data-theme="dark"] .toggle-thumb {
+      transform: translateX(38px);
+    }
+
+    .theme-toggle:hover .toggle-track {
+      border-color: #667eea;
     }
 
     @media (max-width: 768px) {
@@ -137,12 +180,9 @@
       padding: 12px 12px;
     }
 
-    .dark-mode-toggle {
+    .theme-toggle {
       top: 10px;
       right: 10px;
-      width: 45px;
-      height: 45px;
-      font-size: 1.2em;
     }
     }
       @media (max-width: 480px) {
@@ -159,9 +199,12 @@
   </head>
   <body>
 
-    <button class="dark-mode-toggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
-      <span class="light-icon">🌙</span>
-      <span class="dark-icon" style="display: none;">☀️</span>
+    <button class="theme-toggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
+      <div class="toggle-track">
+        <span class="toggle-sun">☀️</span>
+        <span class="toggle-moon">🌙</span>
+        <div class="toggle-thumb"></div>
+      </div>
     </button>
 
     <header class="site-header">
@@ -222,34 +265,14 @@
       // Dark mode toggle functionality
       function toggleDarkMode() {
         const html = document.documentElement;
-        const currentTheme = html.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
+        const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         html.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
-
-        // Toggle icon
-        const lightIcon = document.querySelector('.light-icon');
-        const darkIcon = document.querySelector('.dark-icon');
-
-        if (newTheme === 'dark') {
-          lightIcon.style.display = 'none';
-          darkIcon.style.display = 'block';
-        } else {
-          lightIcon.style.display = 'block';
-          darkIcon.style.display = 'none';
-        }
       }
 
-      // Check for saved theme preference or default to light
+      // Restore saved theme (CSS handles all visual state via [data-theme="dark"])
       const savedTheme = localStorage.getItem('theme') || 'light';
       document.documentElement.setAttribute('data-theme', savedTheme);
-
-      // Set initial icon state
-      if (savedTheme === 'dark') {
-        document.querySelector('.light-icon').style.display = 'none';
-        document.querySelector('.dark-icon').style.display = 'block';
-      }
     </script>
   </body>
   <script>

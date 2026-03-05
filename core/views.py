@@ -261,7 +261,7 @@ def index(request):
         'state_abbrev': state_abbrev
     }
     cache.set(cache_key, cache_data, 600)  # 10 minutes
-    
+
     return render(
         request,
         "core/index.html",
@@ -273,7 +273,7 @@ def index(request):
             "unit": unit,
             "show_random_location_message": show_random_location_message,
             "lat": lat,
-            "lon": lon
+            "lon": lon,
         }
     )
 
@@ -576,9 +576,8 @@ def build_7day_compact(forecasts):
             "snow": has_snow,
             "short_forecast": entry["short_forecast"],
         })
-        if len(result) >= 7:
-            break
     return result
+
 
 
 def compact_forecast(request):
@@ -624,7 +623,6 @@ def compact_forecast(request):
 
     weather_cache_key = f"weather_{round(lat, 2)}_{round(lon, 2)}"
     cached_weather = cache.get(weather_cache_key)
-
     if cached_weather:
         raw_forecasts = cached_weather["forecasts"]
     else:
@@ -632,14 +630,13 @@ def compact_forecast(request):
         if not metadata:
             return render_error("Weather data unavailable.")
         raw_forecasts = weather_service.get_forecast(metadata["forecast"])
-
     if unit == "C":
         for period in raw_forecasts:
             period["temperature"] = convert_temperature(
                 period["temperature"], from_unit="F", to_unit="C"
             )
-
     days = build_7day_compact(raw_forecasts)
+
     any_umbrella = any(d["umbrella"] for d in days)
     any_snow = any(d["snow"] for d in days)
 

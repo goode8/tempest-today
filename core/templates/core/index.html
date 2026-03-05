@@ -100,6 +100,76 @@
       color: #667eea;
     }
 
+    /* View mode toggle slider (Glance / Details) */
+    .view-toggle {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .view-toggle-track {
+      position: relative;
+      display: flex;
+      width: 128px;
+      height: 36px;
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      border-radius: 18px;
+      overflow: hidden;
+      box-sizing: border-box;
+      transition: border-color 0.3s ease;
+    }
+
+    .view-toggle:hover .view-toggle-track {
+      border-color: #9ca3af;
+    }
+
+    .toggle-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .view-toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 60px;
+      height: 28px;
+      background: linear-gradient(135deg, #6b7280, #4b5563);
+      border-radius: 14px;
+      transition: transform 0.3s ease;
+      z-index: 1;
+    }
+
+    .view-toggle.details-mode .view-toggle-thumb {
+      transform: translateX(62px);
+    }
+
+    .view-label {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.82em;
+      font-weight: 600;
+      position: relative;
+      z-index: 2;
+      transition: color 0.25s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    /* Default: Glance (left) active */
+    .view-toggle .view-label:first-of-type { color: white; }
+    .view-toggle .view-label:last-of-type  { color: var(--text-secondary); }
+
+    /* Details mode: right label active */
+    .view-toggle.details-mode .view-label:first-of-type { color: var(--text-secondary); }
+    .view-toggle.details-mode .view-label:last-of-type  { color: white; }
+
+
     .desc {
       color: var(--text-secondary);
       font-weight: 400;
@@ -156,8 +226,10 @@
           max-width: 400px;
         }
 
-        .minimal-toggle {
-          margin-left: 0 !important;
+        .toggle-group {
+          flex-direction: row !important;
+          flex-wrap: nowrap;
+          justify-content: center;
         }
 
         .weather-grid {
@@ -206,7 +278,7 @@
 
     .modal-overlay.active {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
     }
 
@@ -251,6 +323,32 @@
     .modal-close:hover {
       color: var(--text-primary);
       transform: scale(1.1);
+    }
+
+    .modal-nav-arrow {
+      background: none;
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 1.3em;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .modal-nav-arrow:hover {
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+    }
+    .modal-nav-arrow:disabled {
+      opacity: 0.25;
+      cursor: default;
     }
 
     .modal-body {
@@ -346,33 +444,35 @@
   <div class="main-container">
     <form method="post" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
       {% csrf_token %}
-      <input type="text" name="address" placeholder="Enter ZIP Code or City&State" />
+      <input type="text" name="address" placeholder="Enter ZIP Code or City&amp;State" autocomplete="off" enterkeyhint="go" value="{{ address }}" />
       <input type="hidden" name="unit" id="unit-input" value="{{ unit|default:'F' }}" />
       <button type="submit">Check Weather</button>
 
-      <div class="minimal-toggle">
-        <button type="button" class="temp-toggle {% if unit == 'F' or not unit %}active{% endif %}" data-unit="F">°F</button>
-        <button type="button" class="temp-toggle {% if unit == 'C' %}active{% endif %}" data-unit="C">°C</button>
+      <div class="toggle-group">
+        <button type="button" id="unitToggleBtn" onclick="toggleUnit()" class="view-toggle {% if unit == 'C' %}details-mode{% endif %}" aria-label="Toggle temperature unit">
+          <div class="view-toggle-track">
+            <div class="view-toggle-thumb"></div>
+            <span class="view-label">°F</span>
+            <span class="view-label">°C</span>
+          </div>
+        </button>
+        {% if forecasts %}
+        <button type="button" id="viewToggleBtn" onclick="toggleCompactView()" class="view-toggle" aria-label="Toggle view">
+          <div class="view-toggle-track">
+            <div class="view-toggle-thumb"></div>
+            <span class="view-label">Glance</span>
+            <span class="view-label">Details</span>
+          </div>
+        </button>
+        <button type="button" id="radarBtn" onclick="toggleRadar()" class="view-toggle" aria-label="Toggle radar">
+          <div class="view-toggle-track">
+            <div class="view-toggle-thumb"></div>
+            <span class="view-label">Off</span>
+            <span class="view-label">🗺️</span>
+          </div>
+        </button>
+        {% endif %}
       </div>
-
-      {% if forecasts %}
-      <button type="button"
-              id="quickLookBtn"
-              onclick="toggleCompactView()"
-              style="background:transparent; border:2px solid #667eea; color:#667eea; padding:10px 18px; border-radius:50px; font-weight:600; cursor:pointer; font-size:0.9em; transition:all 0.2s; white-space:nowrap;"
-              onmouseover="this.style.background='linear-gradient(135deg,#667eea 0%,#764ba2 100%)';this.style.color='white'"
-              onmouseout="this.style.background='transparent';this.style.color='#667eea'">
-        ☂️ Quick Look
-      </button>
-      <button type="button"
-              id="radarBtn"
-              onclick="toggleRadar()"
-              style="background:transparent; border:2px solid #667eea; color:#667eea; padding:10px 18px; border-radius:50px; font-weight:600; cursor:pointer; font-size:0.9em; transition:all 0.2s; white-space:nowrap;"
-              onmouseover="this.style.background='linear-gradient(135deg,#667eea 0%,#764ba2 100%)';this.style.color='white'"
-              onmouseout="this.style.background='transparent';this.style.color='#667eea'">
-        🗺️ Radar
-      </button>
-      {% endif %}
 
     </form>
     <br />
@@ -423,7 +523,7 @@
     {% if forecasts %}
 
     {% comment %} <p3>Closest Weather Station: {{current.station_full_name}}</p3> {% endcomment %}
-    <p style="text-align: center; color: #6b7280; font-size: 0.95em; margin: 24px 0;">
+    <p id="weather-results" style="text-align: center; color: #6b7280; font-size: 0.95em; margin: 24px 0;">
       Closest Weather Station: {{current.station_full_name}}
     </p>
 
@@ -442,7 +542,7 @@
       </a>
     </div>
 
-    <div class="weather-grid">
+    <div class="weather-grid" style="display:none;">
 
       {% with period=forecasts.0 %}
         <div class="forecast-card current-hightlight clickable-card" onclick="openCurrentWeatherModal()" style="cursor: pointer;">
@@ -670,12 +770,19 @@
         <div id="currentWeatherModal" class="modal-overlay" onclick="closeModal(event)">
           <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-              <h2 style="margin: 0;">Current Conditions Details</h2>
+              <div style="display: flex; align-items: center; gap: 8px; flex: 1; margin-right: 12px;">
+                <button class="modal-nav-arrow" id="currentModalPrev" onclick="navigateFromCurrentModal(-1)" aria-label="Previous" disabled>‹</button>
+                <h2 style="margin: 0; font-size: 1.1em; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Current Conditions</h2>
+                <button class="modal-nav-arrow" id="currentModalNext" onclick="navigateFromCurrentModal(1)" aria-label="Next">›</button>
+              </div>
               <div style="display: flex; align-items: center; gap: 10px;">
-                <div class="minimal-toggle" style="margin: 0;">
-                  <button type="button" class="modal-temp-toggle {% if unit == 'F' or not unit %}active{% endif %}" data-unit="F">°F</button>
-                  <button type="button" class="modal-temp-toggle {% if unit == 'C' %}active{% endif %}" data-unit="C">°C</button>
-                </div>
+                <button type="button" id="currentModalUnitToggle" class="view-toggle {% if unit == 'C' %}details-mode{% endif %}" aria-label="Toggle temperature unit">
+                  <div class="view-toggle-track">
+                    <div class="view-toggle-thumb"></div>
+                    <span class="view-label">°F</span>
+                    <span class="view-label">°C</span>
+                  </div>
+                </button>
                 <button class="modal-close" onclick="closeCurrentWeatherModal()" aria-label="Close modal">×</button>
               </div>
             </div>
@@ -811,12 +918,19 @@
         <div id="forecastModal" class="modal-overlay" onclick="closeModal(event)">
           <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-              <h2 id="forecastModalTitle" style="margin: 0;">Forecast Details</h2>
+              <div style="display: flex; align-items: center; gap: 8px; flex: 1; margin-right: 12px;">
+                <button class="modal-nav-arrow" id="forecastModalPrev" onclick="navigateForecastModal(-1)" aria-label="Previous">‹</button>
+                <h2 id="forecastModalTitle" style="margin: 0; font-size: 1.1em; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h2>
+                <button class="modal-nav-arrow" id="forecastModalNext" onclick="navigateForecastModal(1)" aria-label="Next">›</button>
+              </div>
               <div style="display: flex; align-items: center; gap: 10px;">
-                <div class="minimal-toggle" style="margin: 0;">
-                  <button type="button" class="forecast-modal-temp-toggle {% if unit == 'F' or not unit %}active{% endif %}" data-unit="F">°F</button>
-                  <button type="button" class="forecast-modal-temp-toggle {% if unit == 'C' %}active{% endif %}" data-unit="C">°C</button>
-                </div>
+                <button type="button" id="forecastModalUnitToggle" class="view-toggle {% if unit == 'C' %}details-mode{% endif %}" aria-label="Toggle temperature unit">
+                  <div class="view-toggle-track">
+                    <div class="view-toggle-thumb"></div>
+                    <span class="view-label">°F</span>
+                    <span class="view-label">°C</span>
+                  </div>
+                </button>
                 <button class="modal-close" onclick="closeForecastModal()" aria-label="Close modal">×</button>
               </div>
             </div>
@@ -950,9 +1064,50 @@
 
       </div>
 
-      <!-- Compact view container — hidden by default, shown by Quick Look button -->
+      {% if current.moon_emoji %}
+      <!-- Sky widget — shown alongside Glance view -->
+      <div id="glanceSkyWidget" style="margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; background: var(--bg-secondary); display: flex; align-items: center;">
+
+        <!-- Moon (clickable → moon modal) -->
+        <div onclick="openMoonModal()" title="Moon details"
+             style="flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 8px; padding: 4px 6px; transition: background 0.15s;"
+             onmouseover="this.style.background='var(--card-bg)'" onmouseout="this.style.background='transparent'">
+          <span style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.5em; line-height: 1; flex-shrink: 0;">{{ current.moon_emoji }}</span>
+          <div>
+            <div style="font-size: 0.68em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);">Moon</div>
+            <div style="font-size: 0.85em; font-weight: 600; color: var(--text-primary); white-space: nowrap;">{{ current.moon_name }}</div>
+            <div style="font-size: 0.75em; color: var(--text-secondary);">{{ current.moon_illumination }}% lit</div>
+          </div>
+        </div>
+
+        <div style="width: 1px; height: 40px; background: var(--border-color); margin: 0 8px; flex-shrink: 0;"></div>
+
+        <!-- Sunrise -->
+        <div style="flex: 1; display: flex; align-items: center; gap: 10px; padding: 4px 6px;">
+          <span style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.4em; line-height: 1; flex-shrink: 0;">🌅</span>
+          <div>
+            <div style="font-size: 0.68em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);">Sunrise</div>
+            <div style="font-size: 0.85em; font-weight: 600; color: var(--text-primary); white-space: nowrap;">{{ current.sunrise }}</div>
+          </div>
+        </div>
+
+        <div style="width: 1px; height: 40px; background: var(--border-color); margin: 0 8px; flex-shrink: 0;"></div>
+
+        <!-- Sunset -->
+        <div style="flex: 1; display: flex; align-items: center; gap: 10px; padding: 4px 6px;">
+          <span style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.4em; line-height: 1; flex-shrink: 0;">🌇</span>
+          <div>
+            <div style="font-size: 0.68em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);">Sunset</div>
+            <div style="font-size: 0.85em; font-weight: 600; color: var(--text-primary); white-space: nowrap;">{{ current.sunset }}</div>
+          </div>
+        </div>
+
+      </div>
+      {% endif %}
+
+      <!-- Compact view container — shown by default -->
       <div id="compactViewContainer"
-           style="display:none; margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; background: var(--bg-secondary);">
+           style="margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; background: var(--bg-secondary);">
         <div id="compactViewContent">
           <div style="text-align:center; padding:20px; color: var(--text-secondary);">Loading...</div>
         </div>
@@ -965,6 +1120,100 @@
           <button onclick="toggleRadar()" style="background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:4px 10px; border-radius:20px; font-size:0.78em; cursor:pointer;">← forecast</button>
         </div>
         <div id="radarMap" style="height:420px;"></div>
+      </div>
+
+      {% comment %} Glance Day Modal — outside weather-grid so it's visible in Glance mode {% endcomment %}
+      <div id="glanceModal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+          <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1; margin-right: 12px;">
+              <button class="modal-nav-arrow" id="glanceModalPrev" onclick="navigateGlanceModal(-1)" aria-label="Previous">‹</button>
+              <h2 id="glanceModalTitle" style="margin: 0; font-size: 1.1em; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h2>
+              <button class="modal-nav-arrow" id="glanceModalNext" onclick="navigateGlanceModal(1)" aria-label="Next">›</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" id="glanceModalUnitToggle" class="view-toggle {% if unit == 'C' %}details-mode{% endif %}" aria-label="Toggle temperature unit">
+                <div class="view-toggle-track">
+                  <div class="view-toggle-thumb"></div>
+                  <span class="view-label">°F</span>
+                  <span class="view-label">°C</span>
+                </div>
+              </button>
+              <button class="modal-close" onclick="closeGlanceModal()" aria-label="Close modal">×</button>
+            </div>
+          </div>
+          <div class="modal-body">
+
+            <!-- Icon + short forecast -->
+            <div class="modal-section" style="text-align: center;">
+              <div id="glanceModalIcon" style="font-size: 3.5em; font-family: 'Noto Color Emoji', sans-serif; margin-bottom: 8px;"></div>
+              <p id="glanceModalForecast" style="font-size: 1.1em; color: var(--text-secondary); margin: 0;"></p>
+            </div>
+
+            <!-- High / Low temperatures -->
+            <div class="modal-section">
+              <div style="display: flex; justify-content: space-around; align-items: center; text-align: center; padding: 8px 0;">
+                <div>
+                  <div style="font-size: 0.78em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 8px;">High</div>
+                  <div id="glanceModalHigh" style="font-size: 2.8em; font-weight: 700; color: var(--text-primary); line-height: 1;">–</div>
+                </div>
+                <div style="width: 1px; height: 60px; background: var(--border-color);"></div>
+                <div>
+                  <div style="font-size: 0.78em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 8px;">Low</div>
+                  <div id="glanceModalLow" style="font-size: 2.8em; font-weight: 600; color: var(--text-secondary); line-height: 1;">–</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daytime NWS detail (shown when NWS data available) -->
+            <div id="glanceModalDaytimeSection" class="modal-section" style="display: none;">
+              <h4>Daytime</h4>
+              <p id="glanceModalDaytimeDetailed" style="line-height: 1.6; color: var(--text-primary); margin-bottom: 12px;"></p>
+              <div class="modal-data-grid">
+                <div class="modal-data-item">
+                  <div class="modal-data-label">Wind</div>
+                  <div id="glanceModalDaytimeWind" class="modal-data-value"></div>
+                </div>
+                <div id="glanceModalDaytimeHumidityContainer" class="modal-data-item" style="display: none;">
+                  <div class="modal-data-label">Humidity</div>
+                  <div id="glanceModalDaytimeHumidity" class="modal-data-value"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Overnight NWS detail (shown when NWS data available) -->
+            <div id="glanceModalOvernightSection" class="modal-section" style="display: none;">
+              <h4>Overnight</h4>
+              <p id="glanceModalOvernightDetailed" style="line-height: 1.6; color: var(--text-primary); margin-bottom: 12px;"></p>
+              <div class="modal-data-grid">
+                <div class="modal-data-item">
+                  <div class="modal-data-label">Wind</div>
+                  <div id="glanceModalOvernightWind" class="modal-data-value"></div>
+                </div>
+                <div id="glanceModalOvernightHumidityContainer" class="modal-data-item" style="display: none;">
+                  <div class="modal-data-label">Humidity</div>
+                  <div id="glanceModalOvernightHumidity" class="modal-data-value"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conditions (always shown) -->
+            <div class="modal-section">
+              <h4>Conditions</h4>
+              <div class="modal-data-grid">
+                <div id="glanceModalPrecipContainer" class="modal-data-item">
+                  <div class="modal-data-label">Chance of Precipitation</div>
+                  <div id="glanceModalPrecip" class="modal-data-value"></div>
+                </div>
+                <div id="glanceModalHintContainer" class="modal-data-item" style="display: none;">
+                  <div class="modal-data-label">Recommendation</div>
+                  <div id="glanceModalHint" class="modal-data-value"></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
       {% endif %}
@@ -1028,17 +1277,8 @@
       // Modal functions
       function openCurrentWeatherModal() {
         // Get current state from main page
-        const mainPageUnit = document.querySelector('.temp-toggle.active').dataset.unit;
-        const modalToggleButtons = document.querySelectorAll('.modal-temp-toggle');
-
-        // Set modal toggle buttons to match main page
-        modalToggleButtons.forEach(btn => {
-          if (btn.dataset.unit === mainPageUnit) {
-            btn.classList.add('active');
-          } else {
-            btn.classList.remove('active');
-          }
-        });
+        const mainPageUnit = document.getElementById('unit-input').value;
+        document.getElementById('currentModalUnitToggle').classList.toggle('details-mode', mainPageUnit === 'C');
 
         // Copy weather icon from main card to modal (preserves night/day logic)
         const mainIcon = document.getElementById('currentWeatherMainIcon');
@@ -1072,6 +1312,7 @@
           unitElement.textContent = mainPageUnit;
         });
 
+        updateCurrentModalNavArrows();
         document.getElementById('currentWeatherModal').classList.add('active');
         document.body.style.overflow = 'hidden';
       }
@@ -1084,6 +1325,156 @@
       function closeForecastModal() {
         document.getElementById('forecastModal').classList.remove('active');
         document.body.style.overflow = ''; // Restore scrolling
+      }
+
+      function openGlanceModal(el) {
+        const label       = el.dataset.glanceLabel;
+        const high        = el.dataset.glanceHigh;
+        const low         = el.dataset.glanceLow;
+        const serverUnit  = el.dataset.glanceUnit || 'F';
+        const forecast    = el.dataset.glanceForecast;
+        const precip      = el.dataset.glancePrecip;
+        const precipLabel = el.dataset.glancePrecipLabel;
+        const umbrella    = el.dataset.glanceUmbrella === 'true';
+        const snow        = el.dataset.glanceSnow === 'true';
+        const dateStr     = el.dataset.glanceDate || '';
+
+        document.getElementById('glanceModalTitle').textContent = label;
+
+        // Derive weather emoji from forecast text
+        const f = forecast.toLowerCase();
+        let icon = '🌤️';
+        if (f.includes('thunder'))                                           icon = '⛈️';
+        else if (f.includes('snow'))                                         icon = '❄️';
+        else if (f.includes('sleet') || f.includes('hail'))                 icon = '🌨️';
+        else if (f.includes('heavy rain'))                                   icon = '🌧️';
+        else if (f.includes('rain') || f.includes('shower') || f.includes('drizzle')) icon = '🌦️';
+        else if (f.includes('fog') || f.includes('haze'))                   icon = '🌫️';
+        else if (f.includes('wind') || f.includes('breezy'))                icon = '💨';
+        else if (f.includes('mostly cloudy') || f.includes('partly sunny')) icon = '⛅';
+        else if (f.includes('partly cloudy') || f.includes('mostly sunny')) icon = '🌤️';
+        else if (f.includes('cloudy') || f.includes('overcast'))            icon = '☁️';
+        else if (f.includes('sunny') || f.includes('clear'))                icon = '☀️';
+        document.getElementById('glanceModalIcon').textContent = icon;
+        document.getElementById('glanceModalForecast').textContent = forecast;
+
+        // Temperatures — store originals for the unit toggle
+        const currentUnit = document.getElementById('unit-input').value;
+        function convertTemp(val, fromUnit, toUnit) {
+          let t = parseInt(val);
+          if (fromUnit === toUnit) return t;
+          return toUnit === 'C' ? Math.round((t - 32) * 5 / 9) : Math.round((t * 9 / 5) + 32);
+        }
+        const highEl = document.getElementById('glanceModalHigh');
+        const lowEl  = document.getElementById('glanceModalLow');
+        highEl.dataset.originalTemp = high;
+        highEl.dataset.originalUnit = serverUnit;
+        lowEl.dataset.originalTemp  = low;
+        lowEl.dataset.originalUnit  = serverUnit;
+        highEl.textContent = high ? convertTemp(high, serverUnit, currentUnit) + '°' : '–';
+        lowEl.textContent  = low  ? convertTemp(low,  serverUnit, currentUnit) + '°' : '–';
+
+        // Sync unit toggle to current page unit
+        document.getElementById('glanceModalUnitToggle').classList.toggle('details-mode', currentUnit === 'C');
+
+        // Derive the actual weekday name from the date for NWS card matching
+        // (Open-Meteo labels "Tomorrow" but NWS uses the real day name like "Wednesday")
+        let searchDayName, searchNightName;
+        if (dateStr) {
+          const d = new Date(dateStr + 'T12:00:00');
+          const weekday = d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+          // Check if this is today using local date string
+          const todayISO = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+          if (dateStr === todayISO) {
+            searchDayName = 'today';   // NWS may say "Today" or "This Afternoon"
+            searchNightName = 'tonight';
+          } else {
+            searchDayName = weekday;                // e.g. "wednesday"
+            searchNightName = weekday + ' night';   // e.g. "wednesday night"
+          }
+        } else {
+          // Fallback: use label text (works for NWS-sourced Glance data)
+          const ll = label.toLowerCase();
+          searchDayName   = ll;
+          searchNightName = ll === 'today' ? 'tonight' : ll + ' night';
+        }
+
+        // Find the matching NWS period cards from the hidden detail view
+        let dayCard = null, nightCard = null;
+        document.querySelectorAll('.forecast-card[data-period-name]').forEach(card => {
+          const name = (card.dataset.periodName || '').toLowerCase();
+          // For "today", also accept "this afternoon", "this morning"
+          const matchesDay = searchDayName === 'today'
+            ? (name === 'today' || name.startsWith('this ')) && card.dataset.periodIsDay === 'True'
+            : name === searchDayName;
+          if (matchesDay && !dayCard)   dayCard   = card;
+          if (name === searchNightName && !nightCard) nightCard = card;
+        });
+
+        function decodeUnicode(s) {
+          return (s || '').replace(/\\u[\dA-F]{4}/gi, m => String.fromCharCode(parseInt(m.slice(2), 16)));
+        }
+
+        function populateNwsSection(sectionId, detailedId, windId, humContainerId, humId, card) {
+          const section = document.getElementById(sectionId);
+          if (!card) { section.style.display = 'none'; return; }
+          document.getElementById(detailedId).textContent = decodeUnicode(card.dataset.periodDetailed);
+          const ws = card.dataset.periodWindSpeed, wd = card.dataset.periodWindDir;
+          document.getElementById(windId).textContent = (ws && ws !== 'None') ? `${ws} ${wd}` : 'Calm';
+          const hum = card.dataset.periodHumidity;
+          const humContainer = document.getElementById(humContainerId);
+          if (hum && hum !== '') {
+            document.getElementById(humId).textContent = hum + '%';
+            humContainer.style.display = 'block';
+          } else {
+            humContainer.style.display = 'none';
+          }
+          section.style.display = 'block';
+        }
+
+        populateNwsSection(
+          'glanceModalDaytimeSection', 'glanceModalDaytimeDetailed',
+          'glanceModalDaytimeWind', 'glanceModalDaytimeHumidityContainer', 'glanceModalDaytimeHumidity',
+          dayCard
+        );
+        populateNwsSection(
+          'glanceModalOvernightSection', 'glanceModalOvernightDetailed',
+          'glanceModalOvernightWind', 'glanceModalOvernightHumidityContainer', 'glanceModalOvernightHumidity',
+          nightCard
+        );
+
+        // Precipitation
+        const precipContainer = document.getElementById('glanceModalPrecipContainer');
+        if (precip !== '') {
+          document.getElementById('glanceModalPrecip').textContent = precip + '%' + (precipLabel ? ' — ' + precipLabel : '');
+          precipContainer.style.display = 'block';
+        } else {
+          precipContainer.style.display = 'none';
+        }
+
+        // Umbrella / snow hints
+        const hintContainer = document.getElementById('glanceModalHintContainer');
+        const hints = [];
+        if (umbrella) hints.push('☂️ Pack an umbrella.');
+        if (snow)     hints.push('🥾 Grab your boots.');
+        if (hints.length) {
+          document.getElementById('glanceModalHint').textContent = hints.join('  ');
+          hintContainer.style.display = 'block';
+        } else {
+          hintContainer.style.display = 'none';
+        }
+
+        // Track current row and update nav arrows
+        currentGlanceEl = el;
+        updateGlanceNavArrows();
+
+        document.getElementById('glanceModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeGlanceModal() {
+        document.getElementById('glanceModal').classList.remove('active');
+        document.body.style.overflow = '';
       }
 
       function openMoonModal() {
@@ -1150,9 +1541,79 @@
         if (event.target.classList.contains('modal-overlay')) {
           closeCurrentWeatherModal();
           closeForecastModal();
+          closeGlanceModal();
           closeMoonModal();
           closeAlertModal();
         }
+      }
+
+      // ── Modal navigation ────────────────────────────────────
+      let currentForecastCard = null;
+      let currentGlanceEl = null;
+
+      // Only actual forecast period cards (have data-period-name; excludes current-conditions and moon cards)
+      function forecastNavCards() {
+        return Array.from(document.querySelectorAll('.forecast-card[data-period-name]'));
+      }
+
+      function navigateFromCurrentModal(dir) {
+        if (dir === 1) {
+          closeCurrentWeatherModal();
+          const first = forecastNavCards()[0];
+          if (first) openForecastModal(first);
+        }
+        // dir === -1 is always disabled (current conditions is first)
+      }
+
+      function navigateForecastModal(dir) {
+        const cards = forecastNavCards();
+        const idx = cards.indexOf(currentForecastCard);
+        if (dir === -1 && idx === 0) {
+          // Go back to current conditions
+          closeForecastModal();
+          openCurrentWeatherModal();
+          return;
+        }
+        const next = cards[idx + dir];
+        if (next) openForecastModal(next);
+      }
+
+      function navigateGlanceModal(dir) {
+        const type = currentGlanceEl ? currentGlanceEl.tagName : 'TR';
+        const rows = Array.from(document.querySelectorAll(
+          type === 'TR'
+            ? '#compactViewContent tr[data-glance-date]'
+            : '#compactViewContent .compact-card[data-glance-date]'
+        ));
+        const idx = rows.indexOf(currentGlanceEl);
+        const next = rows[idx + dir];
+        if (next) openGlanceModal(next);
+      }
+
+      function updateCurrentModalNavArrows() {
+        // Prev is always disabled; next enabled if there are forecast cards
+        document.getElementById('currentModalPrev').disabled = true;
+        document.getElementById('currentModalNext').disabled = forecastNavCards().length === 0;
+      }
+
+      function updateForecastNavArrows() {
+        const cards = forecastNavCards();
+        const idx = cards.indexOf(currentForecastCard);
+        // Prev enabled for all (idx 0 goes back to current conditions)
+        document.getElementById('forecastModalPrev').disabled = false;
+        document.getElementById('forecastModalNext').disabled = idx >= cards.length - 1;
+      }
+
+      function updateGlanceNavArrows() {
+        const type = currentGlanceEl ? currentGlanceEl.tagName : 'TR';
+        const rows = Array.from(document.querySelectorAll(
+          type === 'TR'
+            ? '#compactViewContent tr[data-glance-date]'
+            : '#compactViewContent .compact-card[data-glance-date]'
+        ));
+        const idx = rows.indexOf(currentGlanceEl);
+        document.getElementById('glanceModalPrev').disabled = idx <= 0;
+        document.getElementById('glanceModalNext').disabled = idx >= rows.length - 1;
       }
 
       function openForecastModal(cardElement) {
@@ -1169,7 +1630,7 @@
         const isDaytime = cardElement.dataset.periodIsDay === 'True';
 
         // Get main page unit
-        const mainPageUnit = document.querySelector('.temp-toggle.active').dataset.unit;
+        const mainPageUnit = document.getElementById('unit-input').value;
         const originalUnit = '{{ unit|default:"F" }}';
 
         // Decode Unicode escapes in detailedForecast (e.g., \u002D to -)
@@ -1205,14 +1666,8 @@
           trendElement.style.display = 'none';
         }
 
-        // Sync toggle buttons with main page
-        document.querySelectorAll('.forecast-modal-temp-toggle').forEach(btn => {
-          if (btn.dataset.unit === mainPageUnit) {
-            btn.classList.add('active');
-          } else {
-            btn.classList.remove('active');
-          }
-        });
+        // Sync toggle with main page
+        document.getElementById('forecastModalUnitToggle').classList.toggle('details-mode', mainPageUnit === 'C');
         document.getElementById('forecastModalTempUnit').textContent = mainPageUnit;
 
         // Set weather icon (copy from card)
@@ -1241,6 +1696,10 @@
           humidityContainer.style.display = 'none';
         }
 
+        // Track current card and update nav arrows
+        currentForecastCard = cardElement;
+        updateForecastNavArrows();
+
         // Open modal
         document.getElementById('forecastModal').classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -1257,191 +1716,125 @@
       });
 
       // Handle MODAL temperature toggle clicks (separate from main page toggle)
-      document.querySelectorAll('.modal-temp-toggle').forEach(button => {
-        button.addEventListener('click', function() {
-          const newUnit = this.dataset.unit;
-          const currentUnit = document.querySelector('.modal-temp-toggle.active').dataset.unit;
+      document.getElementById('currentModalUnitToggle').addEventListener('click', function() {
+        const wasC = this.classList.toggle('details-mode');
+        const newUnit = wasC ? 'C' : 'F';
+        const originalUnit = '{{ unit|default:"F" }}';
 
-          // Don't do anything if clicking the same unit
-          if (newUnit === currentUnit) return;
-
-          // Remove active class from all modal toggle buttons
-          document.querySelectorAll('.modal-temp-toggle').forEach(btn => {
-            btn.classList.remove('active');
-          });
-
-          // Add active class to clicked button
-          this.classList.add('active');
-
-          // Store original unit if not already stored
-          const originalUnit = '{{ unit|default:"F" }}';
-
-          // Convert all temperatures in the MODAL only
-          document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
-            // Get the original temperature value (store it first time)
-            if (!tempElement.dataset.originalTemp) {
-              tempElement.dataset.originalTemp = tempElement.dataset.temp;
-              tempElement.dataset.originalUnit = originalUnit;
-            }
-
-            let originalTemp = parseFloat(tempElement.dataset.originalTemp);
-
-            // Skip if originalTemp is NaN
-            if (isNaN(originalTemp)) {
-              return;
-            }
-
-            let originalTempUnit = tempElement.dataset.originalUnit;
-            let displayTemp;
-
-            // Always convert from the original value
-            if (originalTempUnit === 'F') {
-              if (newUnit === 'C') {
-                displayTemp = Math.round((originalTemp - 32) * 5 / 9);
-              } else {
-                displayTemp = Math.round(originalTemp);
-              }
-            } else { // originalUnit is C
-              if (newUnit === 'F') {
-                displayTemp = Math.round((originalTemp * 9 / 5) + 32);
-              } else {
-                displayTemp = Math.round(originalTemp);
-              }
-            }
-
-            // Update display
-            tempElement.textContent = displayTemp + '°';
-          });
-
-          // Update all unit labels in modal
-          document.querySelectorAll('.modal-temp-unit').forEach(unitElement => {
-            unitElement.textContent = newUnit;
-          });
-        });
-      });
-
-      // Handle FORECAST MODAL temperature toggle clicks
-      document.querySelectorAll('.forecast-modal-temp-toggle').forEach(button => {
-        button.addEventListener('click', function() {
-          const newUnit = this.dataset.unit;
-          const currentUnit = document.querySelector('.forecast-modal-temp-toggle.active').dataset.unit;
-
-          if (newUnit === currentUnit) return;
-
-          document.querySelectorAll('.forecast-modal-temp-toggle').forEach(btn => {
-            btn.classList.remove('active');
-          });
-
-          this.classList.add('active');
-
-          const originalUnit = '{{ unit|default:"F" }}';
-
-          // Convert temperature in forecast modal
-          const tempElement = document.getElementById('forecastModalTemp');
+        document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
           if (!tempElement.dataset.originalTemp) {
             tempElement.dataset.originalTemp = tempElement.dataset.temp;
             tempElement.dataset.originalUnit = originalUnit;
           }
-
           let originalTemp = parseFloat(tempElement.dataset.originalTemp);
-
-          // Skip if originalTemp is NaN
-          if (isNaN(originalTemp)) {
-            return;
-          }
-
-          let originalTempUnit = tempElement.dataset.originalUnit;
+          if (isNaN(originalTemp)) return;
+          const origUnit = tempElement.dataset.originalUnit;
           let displayTemp;
-
-          if (originalTempUnit === 'F') {
+          if (origUnit === 'F') {
             displayTemp = newUnit === 'C' ? Math.round((originalTemp - 32) * 5 / 9) : Math.round(originalTemp);
           } else {
             displayTemp = newUnit === 'F' ? Math.round((originalTemp * 9 / 5) + 32) : Math.round(originalTemp);
           }
-
           tempElement.textContent = displayTemp + '°';
-          document.getElementById('forecastModalTempUnit').textContent = newUnit;
+        });
+
+        document.querySelectorAll('.modal-temp-unit').forEach(el => el.textContent = newUnit);
+      });
+
+      // Handle FORECAST MODAL temperature toggle clicks
+      document.getElementById('forecastModalUnitToggle').addEventListener('click', function() {
+        const wasC = this.classList.toggle('details-mode');
+        const newUnit = wasC ? 'C' : 'F';
+        const originalUnit = '{{ unit|default:"F" }}';
+
+        const tempElement = document.getElementById('forecastModalTemp');
+        if (!tempElement.dataset.originalTemp) {
+          tempElement.dataset.originalTemp = tempElement.dataset.temp;
+          tempElement.dataset.originalUnit = originalUnit;
+        }
+        let originalTemp = parseFloat(tempElement.dataset.originalTemp);
+        if (isNaN(originalTemp)) return;
+        const origUnit = tempElement.dataset.originalUnit;
+        let displayTemp;
+        if (origUnit === 'F') {
+          displayTemp = newUnit === 'C' ? Math.round((originalTemp - 32) * 5 / 9) : Math.round(originalTemp);
+        } else {
+          displayTemp = newUnit === 'F' ? Math.round((originalTemp * 9 / 5) + 32) : Math.round(originalTemp);
+        }
+        tempElement.textContent = displayTemp + '°';
+        document.getElementById('forecastModalTempUnit').textContent = newUnit;
+      });
+
+      // Glance modal unit toggle
+      document.getElementById('glanceModalUnitToggle').addEventListener('click', function() {
+        const wasC = this.classList.toggle('details-mode');
+        const newUnit = wasC ? 'C' : 'F';
+        [document.getElementById('glanceModalHigh'), document.getElementById('glanceModalLow')].forEach(el => {
+          const orig = parseFloat(el.dataset.originalTemp);
+          if (isNaN(orig)) return;
+          const origUnit = el.dataset.originalUnit || 'F';
+          const t = newUnit === origUnit ? orig
+            : newUnit === 'C' ? Math.round((orig - 32) * 5 / 9)
+            : Math.round((orig * 9 / 5) + 32);
+          el.textContent = t + '°';
         });
       });
 
-      // Handle temperature toggle clicks
-      document.querySelectorAll('.temp-toggle').forEach(button => {
-        button.addEventListener('click', function() {
-          const newUnit = this.dataset.unit;
-          const currentUnit = document.querySelector('.temp-toggle.active').dataset.unit;
+      // Handle temperature toggle
+      function toggleUnit() {
+        const btn = document.getElementById('unitToggleBtn');
+        const isC = btn.classList.toggle('details-mode');
+        const newUnit = isC ? 'C' : 'F';
 
-          // Don't do anything if clicking the same unit
-          if (newUnit === currentUnit) return;
+        document.getElementById('unit-input').value = newUnit;
 
-          // Remove active class from all buttons
-          document.querySelectorAll('.temp-toggle').forEach(btn => {
-            btn.classList.remove('active');
-          });
+        document.querySelectorAll('[data-temp]').forEach(tempElement => {
+          let temp = parseFloat(tempElement.dataset.temp);
+          if (isNaN(temp)) return;
 
-          // Add active class to clicked button
-          this.classList.add('active');
+          if (newUnit === 'C') {
+            temp = Math.round((temp - 32) * 5 / 9);
+          } else {
+            temp = Math.round((temp * 9 / 5) + 32);
+          }
 
-          // Update hidden input
-          document.getElementById('unit-input').value = newUnit;
+          const unitSpan = tempElement.querySelector('.temp-unit');
+          if (unitSpan) {
+            tempElement.innerHTML = temp + '° <span class="temp-unit">' + newUnit + '</span>';
+          } else {
+            tempElement.textContent = temp + '° ';
+          }
 
-          // Convert all temperatures on the page
-          document.querySelectorAll('[data-temp]').forEach(tempElement => {
-            let temp = parseFloat(tempElement.dataset.temp);
-
-            // Skip if temp is NaN (e.g., from "N/A" or invalid data)
-            if (isNaN(temp)) {
-              return;
-            }
-
-            if (newUnit === 'C') {
-              // Convert F to C
-              temp = Math.round((temp - 32) * 5 / 9);
-            } else {
-              // Convert C to F
-              temp = Math.round((temp * 9 / 5) + 32);
-            }
-
-              // Check if this element has a temp-unit span (current conditions only)
-              const unitSpan = tempElement.querySelector('.temp-unit');
-              if (unitSpan) {
-                // Update display with unit
-                tempElement.innerHTML = temp + '° <span class="temp-unit">' + newUnit + '</span>';
-              } else {
-                // Update display without unit (forecast cards)
-                tempElement.textContent = temp + '° ';
-              }
-
-              // Update stored value for next conversion
-              tempElement.dataset.temp = temp;
-
-          });
+          tempElement.dataset.temp = temp;
         });
-      });
+      }
     </script>
 
     <script>
-      // ── Quick Look / Compact View ──────────────────────────
+      // ── Compact View / Full Forecast ───────────────────────
       let compactViewLoaded = false;
-      let compactViewVisible = false;
+      let compactViewVisible = true;  // compact is the default
 
       function toggleCompactView() {
         const container = document.getElementById('compactViewContainer');
-        const btn = document.getElementById('quickLookBtn');
+        const skyWidget = document.getElementById('glanceSkyWidget');
+        const toggle = document.getElementById('viewToggleBtn');
         const weatherGrid = document.querySelector('.weather-grid');
 
-        if (!compactViewVisible) {
-          container.style.display = 'block';
-          weatherGrid.style.display = 'none';
-          btn.textContent = '← Full View';
-          compactViewVisible = true;
-          if (!compactViewLoaded) {
-            loadCompactView();
-          }
-        } else {
+        if (compactViewVisible) {
+          // Switch to Details (full forecast)
           container.style.display = 'none';
+          if (skyWidget) skyWidget.style.display = 'none';
           weatherGrid.style.display = '';
-          btn.textContent = '☂️ Quick Look';
+          toggle.classList.add('details-mode');
           compactViewVisible = false;
+        } else {
+          // Switch back to Glance (compact)
+          container.style.display = 'block';
+          if (skyWidget) skyWidget.style.display = 'flex';
+          weatherGrid.style.display = 'none';
+          toggle.classList.remove('details-mode');
+          compactViewVisible = true;
         }
       }
 
@@ -1462,6 +1855,7 @@
         .then(html => {
           document.getElementById('compactViewContent').innerHTML = html;
           compactViewLoaded = true;
+          patchGlanceTempsFromNWS();
         })
         .catch(() => {
           document.getElementById('compactViewContent').innerHTML =
@@ -1469,39 +1863,94 @@
         });
       }
 
+      // Overwrite Open-Meteo highs/lows in Glance rows with NWS temps where available,
+      // so Glance and Detail views show the same numbers for the first ~7 days.
+      function patchGlanceTempsFromNWS() {
+        // Build map: dayKey → { high, low }  (dayKey = "today", "wednesday", etc.)
+        const nwsMap = {};
+        document.querySelectorAll('.forecast-card[data-period-name]').forEach(card => {
+          const name  = (card.dataset.periodName || '').toLowerCase();
+          const temp  = card.dataset.periodTemp;
+          const isDay = card.dataset.periodIsDay === 'True';
+          if (!temp) return;
+          let dayKey;
+          if (name === 'today' || name.startsWith('this ')) dayKey = 'today';
+          else if (name === 'tonight')                       dayKey = 'today';
+          else if (name.endsWith(' night'))                  dayKey = name.slice(0, -6);
+          else                                               dayKey = name;
+          if (!nwsMap[dayKey]) nwsMap[dayKey] = {};
+          if ( isDay && nwsMap[dayKey].high === undefined) nwsMap[dayKey].high = temp;
+          if (!isDay && nwsMap[dayKey].low  === undefined) nwsMap[dayKey].low  = temp;
+        });
+
+        const todayISO = new Date().toLocaleDateString('en-CA');
+        document.querySelectorAll(
+          '#compactViewContent tr[data-glance-date], #compactViewContent .compact-card[data-glance-date]'
+        ).forEach(row => {
+          const dateStr = row.dataset.glanceDate;
+          if (!dateStr) return;
+          const dayKey = dateStr === todayISO
+            ? 'today'
+            : new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+          const nws = nwsMap[dayKey];
+          if (!nws) return;
+
+          const isDesktop = row.tagName === 'TR';
+          if (nws.high !== undefined) {
+            row.dataset.glanceHigh = nws.high;
+            if (isDesktop) {
+              const el = row.querySelector('.compact-high');
+              if (el) { el.dataset.temp = nws.high; el.textContent = nws.high + '°'; }
+            } else {
+              const el = row.querySelector('.cc-high');
+              if (el) { el.dataset.temp = nws.high; el.textContent = nws.high + '°'; }
+            }
+          }
+          if (nws.low !== undefined) {
+            row.dataset.glanceLow = nws.low;
+            if (isDesktop) {
+              const el = row.querySelector('.compact-low span');
+              if (el) { el.dataset.temp = nws.low; el.textContent = nws.low + '°'; }
+            } else {
+              const el = row.querySelector('.cc-low');
+              if (el) { el.dataset.temp = nws.low; el.textContent = nws.low + '°'; }
+            }
+          }
+        });
+      }
+
       // ── Radar Map ───────────────────────────────────────────
       let radarVisible = false;
       let radarInitialized = false;
       let radarMap = null;
-      let radarPrevCompactVisible = false;
 
       function toggleRadar() {
         const container = document.getElementById('radarContainer');
         const btn = document.getElementById('radarBtn');
         const weatherGrid = document.querySelector('.weather-grid');
         const compactContainer = document.getElementById('compactViewContainer');
-        const quickLookBtn = document.getElementById('quickLookBtn');
+        const skyWidget = document.getElementById('glanceSkyWidget');
+        const viewToggle = document.getElementById('viewToggleBtn');
         radarVisible = !radarVisible;
         if (radarVisible) {
-          radarPrevCompactVisible = compactViewVisible;
           container.style.display = 'block';
-          if (weatherGrid) weatherGrid.style.display = 'none';
           if (compactContainer) compactContainer.style.display = 'none';
-          if (compactViewVisible) {
-            compactViewVisible = false;
-            if (quickLookBtn) quickLookBtn.textContent = '☂️ Quick Look';
-          }
+          if (skyWidget) skyWidget.style.display = 'none';
+          if (weatherGrid) weatherGrid.style.display = 'none';
+          compactViewVisible = false;
         } else {
           container.style.display = 'none';
-          if (radarPrevCompactVisible) {
+          const wasDetails = viewToggle && viewToggle.classList.contains('details-mode');
+          if (!wasDetails) {
             if (compactContainer) compactContainer.style.display = 'block';
+            if (skyWidget) skyWidget.style.display = 'flex';
             compactViewVisible = true;
-            if (quickLookBtn) quickLookBtn.textContent = '← Full View';
           } else {
             if (weatherGrid) weatherGrid.style.display = '';
+            compactViewVisible = false;
           }
         }
-        btn.textContent = radarVisible ? '✕ Close Radar' : '🗺️ Radar';
+        btn.classList.toggle('details-mode', radarVisible);
         if (radarVisible && !radarInitialized) {
           initRadarMap();
         } else if (radarVisible && radarMap) {
@@ -1545,6 +1994,14 @@
             tempElement.dataset.originalUnit = originalUnit;
           }
         });
+
+        // Scroll to weather results on mobile after form submission
+        const weatherResults = document.getElementById('weather-results');
+        if (weatherResults) {
+          weatherResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Load compact view immediately (it's the default)
+          loadCompactView();
+        }
       });
     </script>
 

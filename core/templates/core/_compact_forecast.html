@@ -98,6 +98,8 @@
     background: var(--card-bg);
   }
 
+  .compact-table tbody tr { cursor: pointer; }
+
   .compact-day-label {
     font-weight: 600;
     min-width: 100px;
@@ -138,6 +140,7 @@
     border-radius: 10px;
     padding: 12px 14px;
     gap: 10px;
+    cursor: pointer;
   }
 
   .cc-day {
@@ -198,7 +201,7 @@
 </style>
 
 <div class="compact-header">
-  <h2>7-Day Quick Look</h2>
+  <h2>Quick Glance</h2>
 </div>
 
 {% if any_umbrella or any_snow or active_alerts %}
@@ -262,7 +265,17 @@
   </thead>
   <tbody>
     {% for day in days %}
-    <tr>
+    <tr onclick="openGlanceModal(this)"
+        data-glance-label="{{ day.label }}"
+        data-glance-high="{{ day.high|default:'' }}"
+        data-glance-low="{{ day.low|default:'' }}"
+        data-glance-unit="{{ unit|default:'F' }}"
+        data-glance-forecast="{{ day.short_forecast|escapejs }}"
+        data-glance-precip="{{ day.precip|default:'' }}"
+        data-glance-precip-label="{{ day.precip_label|default:'' }}"
+        data-glance-umbrella="{{ day.umbrella|yesno:'true,false' }}"
+        data-glance-snow="{{ day.snow|yesno:'true,false' }}"
+        data-glance-date="{{ day.date|default:'' }}">
       <td class="compact-day-label">{{ day.label }}</td>
 
       <td class="compact-icon">
@@ -351,7 +364,18 @@
   </div>
 
   {% for day in days %}
-  <div class="compact-card">
+  <div class="compact-card"
+       onclick="openGlanceModal(this)"
+       data-glance-label="{{ day.label }}"
+       data-glance-high="{{ day.high|default:'' }}"
+       data-glance-low="{{ day.low|default:'' }}"
+       data-glance-unit="{{ unit|default:'F' }}"
+       data-glance-forecast="{{ day.short_forecast|escapejs }}"
+       data-glance-precip="{{ day.precip|default:'' }}"
+       data-glance-precip-label="{{ day.precip_label|default:'' }}"
+       data-glance-umbrella="{{ day.umbrella|yesno:'true,false' }}"
+       data-glance-snow="{{ day.snow|yesno:'true,false' }}"
+       data-glance-date="{{ day.date|default:'' }}">
 
     <div class="cc-day">{{ day.label }}</div>
 
