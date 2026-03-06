@@ -107,21 +107,37 @@ def index(request):
                 "unit": unit
             })
         
-        # Check if location is in USA (rough check using country code or bounds)
-        # Geopy location objects have address components
+        # Check if location is in USA (via country code from geocoder, or lat/lon bounds fallback)
+        is_international = False
+        country_name = "another country"
+
         if location and hasattr(location, 'raw'):
             address_components = location.raw.get('address', {})
             country_code = address_components.get('country_code', '').upper()
-            
             if country_code and country_code != 'US':
+                is_international = True
+                country_name = address_components.get('country', 'another country')
+
+        # Lat/lon bounds fallback: if country_code unavailable, check coordinates
+        if not is_international and lat is not None and lon is not None:
+            if not (18 <= lat <= 72 and -180 <= lon <= -65):
+                is_international = True
+
+        if is_international:
+            return render(request, "core/index.html", {
+                "error_message": f"We found your location in {country_name}, but we currently only support USA weather with NOAA data.",
+                "error_type": "international",
+                "unit": unit
+            })
+    except AttributeError:
+        # Cached location object might not have 'raw' attribute; fall back to bounds check
+        if lat is not None and lon is not None:
+            if not (18 <= lat <= 72 and -180 <= lon <= -65):
                 return render(request, "core/index.html", {
-                    "error_message": f"We found your location in {address_components.get('country', 'another country')}, but we currently only support USA weather.",
+                    "error_message": "We found your location outside the USA, but we currently only support USA weather with NOAA data.",
                     "error_type": "international",
                     "unit": unit
                 })
-    except AttributeError:
-        # Cached location object might not have 'raw' attribute
-        pass
 
     # Check cache first (round coordinates to 2 decimal places for cache key)
     cache_key = f"weather_{round(lat, 2)}_{round(lon, 2)}"

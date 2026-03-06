@@ -59,6 +59,7 @@ class WeatherService:
                     'q': query,
                     'format': 'json',
                     'limit': 1,
+                    'addressdetails': 1,
                 }
                 
                 # Only restrict to US if no international keyword
@@ -76,7 +77,7 @@ class WeatherService:
                         
                         # Parse address components first
                         address_parts = {
-                            'country_code': result.get('address', {}).get('country_code', 'us'),
+                            'country_code': result.get('address', {}).get('country_code', ''),
                             'state': result.get('address', {}).get('state'),
                             'ISO3166-2-lvl4': f"US-{result.get('address', {}).get('state')}" if result.get('address', {}).get('state') else None,
                             'country': result.get('address', {}).get('country', 'United States')

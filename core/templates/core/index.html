@@ -519,12 +519,12 @@
 
         {% if error_type == 'international' %}
           <div style="font-size: 4em; margin-bottom: 10px;">🌍</div>
-          <h2 style="margin-top: 0; font-size: 1.8em;">International Weather Coming Soon!</h2>
+          <h2 style="margin-top: 0; font-size: 1.8em;">International Weather Not Available</h2>
           <p style="font-size: 1.1em; line-height: 1.6; margin: 20px 0;">
             {{ error_message }}
           </p>
-          <p style="font-size: 0.95em; margin-top: 20px; opacity: 0.9;">
-            We're currently focused on USA locations using NOAA data. International coverage is on our roadmap!
+          <p style="font-size: 0.9em; opacity: 0.85;">
+            Want to try the app? Press Check Weather for a random USA location.
           </p>
         {% else %}
           <div style="font-size: 3em; margin-bottom: 10px;">⚠️</div>
@@ -1021,79 +1021,6 @@
           </div>
         </div>
 
-        {% comment %} Moon Modal {% endcomment %}
-        <div id="moonModal" class="modal-overlay" onclick="closeModal(event)">
-          <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-              <h2 style="margin: 0;">Moon Details</h2>
-              <button class="modal-close" onclick="closeMoonModal()" aria-label="Close modal">×</button>
-            </div>
-            <div class="modal-body">
-
-              {% comment %} Moon Phase & Emoji {% endcomment %}
-              <div class="modal-section">
-                <div style="text-align: center;">
-                  <div style="font-family:'Noto Color Emoji', sans-serif; font-size: 5em; margin: 10px 0;">
-                    {{ current.moon_emoji }}
-                  </div>
-                  <h3 style="font-size: 2em; margin: 10px 0;">{{ current.moon_name }}</h3>
-                  <p style="font-size: 1.2em; color: var(--text-secondary); margin: 0;">
-                    {{ current.moon_illumination }}% Illuminated
-                  </p>
-                </div>
-              </div>
-
-              {% comment %} Moon Times - only show if data available
-              {% if current.moonrise != "N/A" or current.moonset != "N/A" or current.moon_transit != "N/A" %}
-              <div class="modal-section">
-                <h4>Moon Times</h4>
-                <div class="modal-data-grid">
-                  {% if current.moonrise != "N/A" %}
-                  <div class="modal-data-item">
-                    <div class="modal-data-label">Moonrise</div>
-                    <div class="modal-data-value">{{ current.moonrise }}</div>
-                  </div>
-                  {% endif %}
-                  {% if current.moonset != "N/A" %}
-                  <div class="modal-data-item">
-                    <div class="modal-data-label">Moonset</div>
-                    <div class="modal-data-value">{{ current.moonset }}</div>
-                  </div>
-                  {% endif %}
-                  {% if current.moon_transit != "N/A" %}
-                  <div class="modal-data-item" style="grid-column: 1 / -1;">
-                    <div class="modal-data-label">Best Viewing Time</div>
-                    <div class="modal-data-value" style="font-size: 1.1em;">{{ current.moon_transit }}</div>
-                  </div>
-                  {% endif %}
-                </div>
-              </div>
-              {% endif %}
-              {% endcomment %}
-
-              {% comment %} Upcoming Moon Phases {% endcomment %}
-              <div class="modal-section">
-                <h4>Upcoming Phases</h4>
-                <div class="modal-data-grid">
-                  {% if current.next_full_moon != "N/A" %}
-                  <div class="modal-data-item">
-                    <div class="modal-data-label">Next Full Moon</div>
-                    <div class="modal-data-value">🌕 {{ current.next_full_moon }}</div>
-                  </div>
-                  {% endif %}
-                  {% if current.next_new_moon != "N/A" %}
-                  <div class="modal-data-item">
-                    <div class="modal-data-label">Next New Moon</div>
-                    <div class="modal-data-value">🌑 {{ current.next_new_moon }}</div>
-                  </div>
-                  {% endif %}
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
       </div>
 
       {% if current.moon_emoji %}
@@ -1152,6 +1079,51 @@
           <button onclick="toggleRadar()" style="background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:4px 10px; border-radius:20px; font-size:0.78em; cursor:pointer;">← forecast</button>
         </div>
         <div id="radarMap" style="height:420px;"></div>
+      </div>
+
+      {% comment %} Moon Modal — outside weather-grid so it's visible in compact mode {% endcomment %}
+      <div id="moonModal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+          <div class="modal-header">
+            <h2 style="margin: 0;">Moon Details</h2>
+            <button class="modal-close" onclick="closeMoonModal()" aria-label="Close modal">×</button>
+          </div>
+          <div class="modal-body">
+
+            {% comment %} Moon Phase & Emoji {% endcomment %}
+            <div class="modal-section">
+              <div style="text-align: center;">
+                <div style="font-family:'Noto Color Emoji', sans-serif; font-size: 5em; margin: 10px 0;">
+                  {{ current.moon_emoji }}
+                </div>
+                <h3 style="font-size: 2em; margin: 10px 0;">{{ current.moon_name }}</h3>
+                <p style="font-size: 1.2em; color: var(--text-secondary); margin: 0;">
+                  {{ current.moon_illumination }}% Illuminated
+                </p>
+              </div>
+            </div>
+
+            {% comment %} Upcoming Moon Phases {% endcomment %}
+            <div class="modal-section">
+              <h4>Upcoming Phases</h4>
+              <div class="modal-data-grid">
+                {% if current.next_full_moon != "N/A" %}
+                <div class="modal-data-item">
+                  <div class="modal-data-label">Next Full Moon</div>
+                  <div class="modal-data-value">🌕 {{ current.next_full_moon }}</div>
+                </div>
+                {% endif %}
+                {% if current.next_new_moon != "N/A" %}
+                <div class="modal-data-item">
+                  <div class="modal-data-label">Next New Moon</div>
+                  <div class="modal-data-value">🌑 {{ current.next_new_moon }}</div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
       {% comment %} Glance Day Modal — outside weather-grid so it's visible in Glance mode {% endcomment %}
