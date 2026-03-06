@@ -131,6 +131,10 @@
       align-items: center;
     }
 
+    .sky-section {
+      min-width: 0;
+    }
+
     .view-toggle-thumb {
       position: absolute;
       top: 2px;
@@ -268,6 +272,25 @@
 
         .view-toggle.details-mode .view-toggle-thumb {
           transform: translateX(34px);
+        }
+
+        /* Sky widget: compact layout on narrow screens */
+        #glanceSkyWidget {
+          padding: 8px 10px;
+        }
+
+        .sky-section {
+          min-width: 0;
+          gap: 6px !important;
+          padding: 4px 2px !important;
+        }
+
+        .sky-emoji {
+          font-size: 1.15em !important;
+        }
+
+        .sky-divider {
+          margin: 0 4px !important;
         }
       }
 
@@ -1078,10 +1101,10 @@
       <div id="glanceSkyWidget" style="margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; background: var(--bg-secondary); display: flex; align-items: center;">
 
         <!-- Moon (clickable → moon modal) -->
-        <div onclick="openMoonModal()" title="Moon details"
+        <div onclick="openMoonModal()" title="Moon details" class="sky-section"
              style="flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 8px; padding: 4px 6px; transition: background 0.15s;"
              onmouseover="this.style.background='var(--card-bg)'" onmouseout="this.style.background='transparent'">
-          <span style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.5em; line-height: 1; flex-shrink: 0;">{{ current.moon_emoji }}</span>
+          <span class="sky-emoji" style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.5em; line-height: 1; flex-shrink: 0;">{{ current.moon_emoji }}</span>
           <div>
             <div style="font-size: 0.68em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);">Moon</div>
             <div style="font-size: 0.85em; font-weight: 600; color: var(--text-primary); white-space: nowrap;">{{ current.moon_name }}</div>
@@ -1089,22 +1112,22 @@
           </div>
         </div>
 
-        <div style="width: 1px; height: 40px; background: var(--border-color); margin: 0 8px; flex-shrink: 0;"></div>
+        <div class="sky-divider" style="width: 1px; height: 40px; background: var(--border-color); margin: 0 8px; flex-shrink: 0;"></div>
 
         <!-- Sunrise -->
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 6px;">
-          <span style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.4em; line-height: 1; flex-shrink: 0;">🌅</span>
+        <div class="sky-section" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 6px;">
+          <span class="sky-emoji" style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.4em; line-height: 1; flex-shrink: 0;">🌅</span>
           <div>
             <div style="font-size: 0.68em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);">Sunrise</div>
             <div style="font-size: 0.85em; font-weight: 600; color: var(--text-primary); white-space: nowrap;">{{ current.sunrise }}</div>
           </div>
         </div>
 
-        <div style="width: 1px; height: 40px; background: var(--border-color); margin: 0 8px; flex-shrink: 0;"></div>
+        <div class="sky-divider" style="width: 1px; height: 40px; background: var(--border-color); margin: 0 8px; flex-shrink: 0;"></div>
 
         <!-- Sunset -->
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 6px;">
-          <span style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.4em; line-height: 1; flex-shrink: 0;">🌇</span>
+        <div class="sky-section" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 6px;">
+          <span class="sky-emoji" style="font-family:'Noto Color Emoji',sans-serif; font-size: 1.4em; line-height: 1; flex-shrink: 0;">🌇</span>
           <div>
             <div style="font-size: 0.68em; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary);">Sunset</div>
             <div style="font-size: 0.85em; font-weight: 600; color: var(--text-primary); white-space: nowrap;">{{ current.sunset }}</div>
