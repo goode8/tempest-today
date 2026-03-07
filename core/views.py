@@ -22,7 +22,7 @@ def index(request):
     forecasts = []
     current_weather = {}
     address = ""
-    unit = request.POST.get("unit", "F")  # Get selected unit, default to F
+    unit = request.POST.get("unit", "F")  # Get selected unit, default to F (Canada will override to C below)
     
     # Only process if form was submitted
     if request.method != "POST":
@@ -39,7 +39,7 @@ def index(request):
         import random
         random_locations = [
             "Miami, FL",
-            "Seattle, WA", 
+            "Seattle, WA",
             "Denver, CO",
             "Portland, ME",
             "Austin, TX",
@@ -57,7 +57,13 @@ def index(request):
             "Nashville, TN",
             "Minneapolis, MN",
             "San Diego, CA",
-            "Savannah, GA"
+            "Savannah, GA",
+            "Toronto, Ontario",
+            "Vancouver, BC",
+            "Calgary, Alberta",
+            "Montreal, Quebec",
+            "Halifax, Nova Scotia",
+            "Winnipeg, Manitoba",
         ]
         address = random.choice(random_locations)
 
@@ -107,34 +113,40 @@ def index(request):
                 "unit": unit
             })
         
-        # Check if location is in USA (via country code from geocoder, or lat/lon bounds fallback)
-        is_international = False
+        # Determine country from geocoder result or lat/lon bounds
+        country_code = ''
         country_name = "another country"
+        is_canada = False
 
         if location and hasattr(location, 'raw'):
             address_components = location.raw.get('address', {})
             country_code = address_components.get('country_code', '').upper()
-            if country_code and country_code != 'US':
-                is_international = True
-                country_name = address_components.get('country', 'another country')
+            country_name = address_components.get('country', 'another country')
 
-        # Lat/lon bounds fallback: if country_code unavailable, check coordinates
-        if not is_international and lat is not None and lon is not None:
-            if not (18 <= lat <= 72 and -180 <= lon <= -65):
-                is_international = True
+        # Lat/lon bounds fallback when country_code unavailable
+        if not country_code and lat is not None and lon is not None:
+            if 41.7 <= lat <= 83.1 and -141.0 <= lon <= -52.6:
+                country_code = 'CA'
+            elif not (18 <= lat <= 72 and -180 <= lon <= -65):
+                country_code = 'XX'  # unknown non-US
+
+        is_canada = (country_code == 'CA')
+        is_international = country_code not in ('US', 'CA', '')
 
         if is_international:
             return render(request, "core/index.html", {
-                "error_message": f"We found your location in {country_name}, but we currently only support USA weather with NOAA data.",
+                "error_message": f"We found your location in {country_name}, but we currently only support USA and Canada weather.",
                 "error_type": "international",
                 "unit": unit
             })
     except AttributeError:
         # Cached location object might not have 'raw' attribute; fall back to bounds check
         if lat is not None and lon is not None:
-            if not (18 <= lat <= 72 and -180 <= lon <= -65):
+            if 41.7 <= lat <= 83.1 and -141.0 <= lon <= -52.6:
+                is_canada = True
+            elif not (18 <= lat <= 72 and -180 <= lon <= -65):
                 return render(request, "core/index.html", {
-                    "error_message": "We found your location outside the USA, but we currently only support USA weather with NOAA data.",
+                    "error_message": "We found your location outside the USA or Canada, but we currently only support USA and Canada weather.",
                     "error_type": "international",
                     "unit": unit
                 })
@@ -144,31 +156,26 @@ def index(request):
     cached_data = cache.get(cache_key)
     
     if cached_data:
-        # Use cached data but still convert temperatures if needed
         forecasts = cached_data['forecasts']
         current_weather = cached_data['current']
         active_alerts = cached_data['active_alerts']
-        state_abbrev = cached_data['state_abbrev']
-        
-        # Convert forecast temperatures if unit changed
-        if unit == 'C':
+        cached_is_canada = cached_data.get('is_canada', False)
+
+        # Canada cache is already in Celsius; US cache is in Fahrenheit
+        if cached_is_canada:
+            unit = 'C'
+        elif unit == 'C':
+            # US data: convert F → C on the fly
             for period in forecasts:
                 period['temperature'] = convert_temperature(
-                    period['temperature'], 
-                    from_unit='F', 
-                    to_unit='C'
+                    period['temperature'], from_unit='F', to_unit='C'
                 )
                 period['temperatureUnit'] = 'C'
-        
-        # Convert current temp if unit changed
-        if current_weather.get('temp') and current_weather['temp'] != "N/A":
-            if unit == 'C':
+            if current_weather.get('temp') and current_weather['temp'] != "N/A":
                 current_weather['temp'] = convert_temperature(
-                    current_weather['temp'],
-                    from_unit='F',
-                    to_unit='C'
+                    current_weather['temp'], from_unit='F', to_unit='C'
                 )
-        
+
         return render(
             request,
             "core/index.html",
@@ -180,19 +187,101 @@ def index(request):
                 "unit": unit,
                 "show_random_location_message": show_random_location_message,
                 "lat": lat,
-                "lon": lon
+                "lon": lon,
+                "is_canada": cached_is_canada,
+            }
+        )
+
+    if is_canada:
+        # Canada defaults to Celsius
+        if unit == 'F':
+            unit = 'C'
+
+        # Fetch from ECCC MSC Datamart + astronomy in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            eccc_future = executor.submit(weather_service.get_eccc_weather, lat, lon)
+            astronomy_future = executor.submit(get_astronomy_data, lat, lon)
+            eccc_result = eccc_future.result()
+            astronomy = astronomy_future.result()
+
+        if eccc_result is None or eccc_result == (None, None, None):
+            return render(request, "core/index.html", {
+                "error_message": "No Environment Canada weather station found near this location. Radar is still available below.",
+                "error_type": "canada_no_station",
+                "unit": unit,
+                "lat": lat,
+                "lon": lon,
+                "is_canada": True,
+                "address": address,
+            })
+
+        forecasts, current_weather, eccc_alerts = eccc_result
+
+        # Convert Fahrenheit → Celsius (ECCC XML parsed to F for cache consistency)
+        for period in forecasts:
+            period['temperature'] = convert_temperature(
+                period['temperature'], from_unit='F', to_unit='C'
+            )
+            period['temperatureUnit'] = 'C'
+        if current_weather.get('temp') is not None:
+            current_weather['temp'] = convert_temperature(
+                current_weather['temp'], from_unit='F', to_unit='C'
+            )
+        if current_weather.get('heat_index') is not None:
+            current_weather['heat_index'] = convert_temperature(
+                current_weather['heat_index'], from_unit='F', to_unit='C'
+            )
+        if current_weather.get('wind_chill') is not None:
+            current_weather['wind_chill'] = convert_temperature(
+                current_weather['wind_chill'], from_unit='F', to_unit='C'
+            )
+
+        current_weather.update(astronomy)
+        try:
+            local_tz = pytz.timezone(astronomy['timezone'])
+            current_time = datetime.now(local_tz)
+            is_night = current_time < astronomy['sunrise_dt'] or current_time > astronomy['sunset_dt']
+            current_weather['is_night'] = is_night
+        except Exception:
+            current_weather['is_night'] = False
+
+        current_weather['active_alerts'] = eccc_alerts
+        current_weather['detailed_forecast'] = forecasts[0].get('detailedForecast', '') if forecasts else ''
+
+        # Cache already-converted Celsius data for Canada
+        cache.set(cache_key, {
+            'forecasts': forecasts,
+            'current': current_weather,
+            'active_alerts': eccc_alerts,
+            'state_abbrev': None,
+            'is_canada': True,
+        }, 600)
+
+        return render(
+            request,
+            "core/index.html",
+            {
+                "forecasts": forecasts,
+                "current": current_weather,
+                "address": address,
+                "active_alerts": eccc_alerts,
+                "unit": unit,
+                "show_random_location_message": show_random_location_message,
+                "lat": lat,
+                "lon": lon,
+                "is_canada": True,
             }
         )
 
     # Step 2: Get NWS metadata (forecast URL, stations URL)
     metadata = weather_service.get_metadata(lat, lon)
-    
+
     if not metadata:
         return render(request, "core/index.html", {
             "error_message": "Unable to retrieve weather data for this location.",
             "unit": unit
         })
-    
+
     # Extract state abbreviation from geocoded location
     state_abbrev = None
     if location and hasattr(location, 'raw'):
@@ -202,36 +291,36 @@ def index(request):
         # Fallback to state field if ISO code not available
         if not state_abbrev:
             state_abbrev = address_components.get('state')
-    
+
     # Step 3-6: Make API calls in parallel for faster loading
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         # Submit all API calls at once
         forecast_future = executor.submit(weather_service.get_forecast, metadata["forecast"])
         alerts_future = executor.submit(weather_service.get_active_alerts, lat, lon)
         astronomy_future = executor.submit(get_astronomy_data, lat, lon)
-        
+
         # Also get current weather in parallel (which internally calls get_nearest_station and get_current_observations)
         current_weather_future = executor.submit(get_current_weather, weather_service, metadata, unit, state_abbrev)
-        
+
         # Wait for all to complete and get results
         forecasts = forecast_future.result()
         active_alerts = alerts_future.result()
         astronomy = astronomy_future.result()
         current_weather = current_weather_future.result()
-    
+
     # Convert forecast temperatures if needed
     if unit == 'C':
         for period in forecasts:
             period['temperature'] = convert_temperature(
-                period['temperature'], 
-                from_unit='F', 
+                period['temperature'],
+                from_unit='F',
                 to_unit='C'
             )
             period['temperatureUnit'] = 'C'
-    
+
     # Add astronomy data to current weather
     current_weather.update(astronomy)
-    
+
     # Step 5b: Determine if it's currently nighttime
     try:
         local_tz = pytz.timezone(astronomy['timezone'])
@@ -240,12 +329,12 @@ def index(request):
         current_weather['is_night'] = is_night
     except:
         current_weather['is_night'] = False
-    
+
     # Step 5c: Create moon visibility message based on position and weather
     # moon_visible = current_weather.get('moon_visible', False)
     description = current_weather.get('description') or ''
     description = description.lower() if description else ''
-    
+
     # if moon_visible:
     #     # Moon is up - check weather conditions
     #     if any(word in description for word in ['cloud', 'overcast', 'fog', 'haze']):
@@ -256,25 +345,26 @@ def index(request):
     #         visibility_msg = "Moon should be visible"
     # else:
     #     visibility_msg = "Moon is not up right now"
-    
+
     # current_weather['moon_visibility_msg'] = visibility_msg
-    
+
     # Add alerts to current weather
     current_weather["active_alerts"] = active_alerts
-    
+
     # Step 7: Add detailed forecast from first period
     if forecasts and len(forecasts) > 0:
         current_weather["detailed_forecast"] = forecasts[0].get("detailedForecast", "")
     else:
         current_weather["detailed_forecast"] = ""
-    
+
     # Cache the weather data for 10 minutes (600 seconds)
     # Store in Fahrenheit to make unit conversion easier on cached data
     cache_data = {
         'forecasts': forecasts,
         'current': current_weather,
         'active_alerts': active_alerts,
-        'state_abbrev': state_abbrev
+        'state_abbrev': state_abbrev,
+        'is_canada': False,
     }
     cache.set(cache_key, cache_data, 600)  # 10 minutes
 
@@ -290,6 +380,7 @@ def index(request):
             "show_random_location_message": show_random_location_message,
             "lat": lat,
             "lon": lon,
+            "is_canada": False,
         }
     )
 
@@ -518,11 +609,22 @@ def build_7day_compact(forecasts):
         short_lower = short.lower()
         detailed = period.get("detailedForecast", "")
 
-        if "Tonight" in name or "Overnight" in name or ("Night" in name and name != "Night"):
-            if "Tonight" in name or "Overnight" in name:
+        name_lower = name.lower()
+        is_night_period = (
+            "tonight" in name_lower
+            or "overnight" in name_lower
+            or ("night" in name_lower and name_lower != "night")
+        )
+        # If no isDaytime field (ECCC), infer from name
+        if "isDaytime" not in period:
+            is_day = not is_night_period
+
+        if is_night_period:
+            if "tonight" in name_lower or "overnight" in name_lower:
                 day_key = "Today"
             else:
-                day_key = name.replace(" Night", "").replace(" night", "").strip()
+                import re as _re
+                day_key = _re.sub(r'\s+night$', '', name, flags=_re.IGNORECASE).strip()
         elif name.startswith("This ") or name.startswith("Late "):
             day_key = "Today"
         elif name == "Today":
@@ -637,26 +739,59 @@ def compact_forecast(request):
     if not location:
         return render_error("Location not found.")
 
+    # Detect Canada from cached geocode country_code or lat/lon bounds
+    is_canada = False
+    country_code = ''
+    if hasattr(location, 'raw'):
+        country_code = location.raw.get('address', {}).get('country_code', '').upper()
+        is_canada = (country_code == 'CA')
+    # Only use lat/lon bounds as fallback when country_code is truly unknown
+    if not country_code and lat is not None and lon is not None:
+        if 41.7 <= lat <= 83.1 and -141.0 <= lon <= -52.6:
+            is_canada = True
+
+    # Canada always uses Celsius
+    if is_canada:
+        unit = 'C'
+
     weather_cache_key = f"weather_{round(lat, 2)}_{round(lon, 2)}"
     cached_weather = cache.get(weather_cache_key)
+
+    eccc_alerts = []
     if cached_weather:
         raw_forecasts = cached_weather["forecasts"]
+        eccc_alerts = cached_weather.get('active_alerts', []) if cached_weather.get('is_canada') else []
+        # Canada cache is already in Celsius; US cache needs conversion if requested
+        if not cached_weather.get('is_canada', False) and unit == "C":
+            for period in raw_forecasts:
+                period["temperature"] = convert_temperature(
+                    period["temperature"], from_unit="F", to_unit="C"
+                )
+    elif is_canada:
+        eccc_result = weather_service.get_eccc_weather(lat, lon)
+        if not eccc_result or eccc_result == (None, None, None):
+            return render_error("No Environment Canada station found near this location.")
+        raw_forecasts, _, eccc_alerts = eccc_result
+        # Convert F → C (ECCC returns F internally)
+        for period in raw_forecasts:
+            period["temperature"] = convert_temperature(
+                period["temperature"], from_unit="F", to_unit="C"
+            )
     else:
         metadata = weather_service.get_metadata(lat, lon)
         if not metadata:
             return render_error("Weather data unavailable.")
         raw_forecasts = weather_service.get_forecast(metadata["forecast"])
-    if unit == "C":
-        for period in raw_forecasts:
-            period["temperature"] = convert_temperature(
-                period["temperature"], from_unit="F", to_unit="C"
-            )
-    days = build_7day_compact(raw_forecasts)
+        if unit == "C":
+            for period in raw_forecasts:
+                period["temperature"] = convert_temperature(
+                    period["temperature"], from_unit="F", to_unit="C"
+                )
 
+    days = build_7day_compact(raw_forecasts)
     any_umbrella = any(d["umbrella"] for d in days)
     any_snow = any(d["snow"] for d in days)
-
-    active_alerts = weather_service.get_active_alerts(lat, lon)
+    active_alerts = eccc_alerts if is_canada else weather_service.get_active_alerts(lat, lon)
 
     html = render_to_string("core/_compact_forecast.html", {
         "days": days,
@@ -667,5 +802,6 @@ def compact_forecast(request):
         "active_alerts": active_alerts,
         "lat": lat,
         "lon": lon,
+        "is_canada": is_canada,
     }, request=request)
     return HttpResponse(html)

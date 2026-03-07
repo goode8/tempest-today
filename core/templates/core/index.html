@@ -476,7 +476,7 @@
   <div class="main-container">
     <form method="post" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
       {% csrf_token %}
-      <input type="text" name="address" placeholder="Enter ZIP Code or City&amp;State" autocomplete="off" enterkeyhint="go" value="{{ address }}" />
+      <input type="text" name="address" placeholder="City, State or Province — or Postal Code" autocomplete="off" enterkeyhint="go" value="{{ address }}" />
       <input type="hidden" name="unit" id="unit-input" value="{{ unit|default:'F' }}" />
       <button type="submit">Check Weather</button>
 
@@ -524,17 +524,49 @@
             {{ error_message }}
           </p>
           <p style="font-size: 0.9em; opacity: 0.85;">
-            Want to try the app? Press Check Weather for a random USA location.
+            Want to try the app? Press Check Weather for a random USA or Canadian location.
           </p>
+        {% elif error_type == 'canada_no_station' %}
+          <div style="font-size: 3em; margin-bottom: 10px;">📡</div>
+          <h2 style="margin-top: 0; font-size: 1.5em; color: #856404;">No Forecast Data Available</h2>
+          <p style="font-size: 1.1em;">This area is too remote for Environment Canada station coverage.</p>
+          <p style="font-size: 0.9em; margin-top: 8px; color: #666;">Live radar is available below.</p>
         {% else %}
           <div style="font-size: 3em; margin-bottom: 10px;">⚠️</div>
           <h2 style="margin-top: 0; font-size: 1.5em; color: #856404;">Oops!</h2>
           <p style="font-size: 1.1em;">{{ error_message }}</p>
           <p style="font-size: 0.9em; margin-top: 15px; color: #666;">
-            Try entering a US ZIP code (like 00001) or City, State (like Honolulu, HI).
+            Try entering a City, State (like Honolulu, HI), City, Province (like Calgary, AB), or a ZIP / postal code.
           </p>
         {% endif %}
       </div>
+
+      {% if error_type == 'canada_no_station' and lat %}
+      <div style="margin-top: 16px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden;">
+        <div style="padding: 8px 12px; background: var(--bg-secondary); display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 0.8em; color: var(--text-secondary);">Live radar · updated every few minutes · MSC GeoMet / Environment Canada</span>
+        </div>
+        <div id="radarMap" style="height: 420px;"></div>
+      </div>
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          const map = L.map('radarMap').setView([{{ lat }}, {{ lon }}], 7);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 18
+          }).addTo(map);
+          L.tileLayer.wms('https://geo.weather.gc.ca/geomet', {
+            layers: 'RADAR_1KM_RRAI',
+            format: 'image/png',
+            transparent: true,
+            opacity: 0.65,
+            attribution: '© <a href="https://www.canada.ca/en/environment-climate-change.html">Environment and Climate Change Canada</a> / MSC GeoMet'
+          }).addTo(map);
+          L.marker([{{ lat }}, {{ lon }}]).addTo(map).bindPopup('{{ address|escapejs }}').openPopup();
+        });
+      </script>
+      {% endif %}
+
       {% endif %}
 
     {% if show_random_location_message %}
@@ -547,7 +579,7 @@
           In the meantime, here's the weather for <strong>{{ address }}</strong>!
         </p>
         <p style="font-size: 0.8em; margin-top: 12px; opacity: 0.85;">
-          Refresh to see a different random location 🌍
+          Clear the city and click Check Weather for a different random location 🌍
         </p>
       </div>
     {% endif %}
@@ -558,7 +590,6 @@
     <p id="weather-results" style="text-align: center; color: #6b7280; font-size: 0.95em; margin: 24px 0;">
       Closest Weather Station: {{current.station_full_name}}
     </p>
-
     <div style="text-align: center; margin: -10px 0 20px 0;">
       <a href="#support" style="
         color: var(--text-secondary);
@@ -656,6 +687,7 @@
                        data-alert-description="{{ alert.description|escapejs }}"
                        data-alert-instruction="{{ alert.instruction|default:'No specific instructions provided.'|escapejs }}"
                        data-alert-urgency="{{ alert.urgency }}"
+                       data-alert-url="{{ alert.url|default:'' }}"
                        data-alert-lat="{{ lat }}"
                        data-alert-lon="{{ lon }}">
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
@@ -797,6 +829,16 @@
           </div>
 
         {% endfor %}
+
+        {% if is_canada %}
+        <p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 4px 0; width: 100%;">
+          Weather data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
+        </p>
+        {% else %}
+        <p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 4px 0; width: 100%;">
+          Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a>
+        </p>
+        {% endif %}
 
         {% comment %} Current Weather Modal - only render when forecasts exist {% endcomment %}
         <div id="currentWeatherModal" class="modal-overlay" onclick="closeModal(event)">
@@ -1075,10 +1117,13 @@
       <!-- Radar map container — hidden by default -->
       <div id="radarContainer" style="display:none; margin-top:8px; border:1px solid var(--border-color); border-radius:12px; overflow:hidden;">
         <div style="padding:8px 12px; background:var(--bg-secondary); display:flex; align-items:center; justify-content:space-between;">
-          <span style="font-size:0.8em; color:var(--text-secondary);">Live radar · updated every few minutes</span>
+          <span style="font-size:0.8em; color:var(--text-secondary);">Live radar · updated every few minutes{% if is_canada %} · MSC GeoMet / Environment Canada{% endif %}</span>
           <button onclick="toggleRadar()" style="background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:4px 10px; border-radius:20px; font-size:0.78em; cursor:pointer;">← forecast</button>
         </div>
         <div id="radarMap" style="height:420px;"></div>
+        <div style="padding:6px 12px; background:var(--bg-secondary); border-top:1px solid var(--border-color);">
+          <span style="font-size:0.75em; color:var(--text-secondary); font-style:italic;">{% if is_canada %}Showing Canadian radar. For US coverage, search a US city.{% else %}Showing US radar. For Canadian coverage, search a Canadian city.{% endif %}</span>
+        </div>
       </div>
 
       {% comment %} Moon Modal — outside weather-grid so it's visible in compact mode {% endcomment %}
@@ -1258,19 +1303,19 @@
             <p id="alertModalInstruction" style="color: var(--text-primary); line-height: 1.6; white-space: pre-wrap;"></p>
           </div>
 
-          <!-- NWS Link -->
+          <!-- Alert source link (NWS or ECCC) -->
           <div style="text-align: center; margin: 20px 0;">
             <a id="alertModalNWSLink" href="#" target="_blank" rel="noopener noreferrer"
                style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                       color: white; text-decoration: none; border-radius: 8px; font-weight: 600;
                       transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
-              🌐 View Full Alert on NWS Website →
+              🌐 View Full Alert →
             </a>
           </div>
 
           <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ff9800; border-radius: 4px;">
             <p style="margin: 0; color: #856404; font-size: 0.9em; line-height: 1.5;">
-              <strong>⚠️ Important:</strong> Always follow official guidance from local authorities and the National Weather Service.
+              <strong>⚠️ Important:</strong> Always follow official guidance from local authorities and your national weather service.
             </p>
           </div>
         </div>
@@ -1521,11 +1566,16 @@
         document.getElementById('alertModalDescription').textContent = decodedDescription || 'No additional description available.';
         document.getElementById('alertModalInstruction').textContent = decodedInstruction || 'No specific instructions provided.';
 
-        // Build NWS forecast URL from lat/lon
+        // Build alert source URL — direct for Canada (ECCC), lat/lon for US (NWS)
         const nwsLink = document.getElementById('alertModalNWSLink');
-        if (lat && lon) {
-          const nwsUrl = `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}`;
-          nwsLink.href = nwsUrl;
+        const alertUrl = alertElement.dataset.alertUrl;
+        if (alertUrl) {
+          nwsLink.href = alertUrl;
+          nwsLink.textContent = '🌐 View Full Alert on Environment Canada →';
+          nwsLink.style.display = 'inline-block';
+        } else if (lat && lon) {
+          nwsLink.href = `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}`;
+          nwsLink.textContent = '🌐 View Full Alert on NWS Website →';
           nwsLink.style.display = 'inline-block';
         } else {
           nwsLink.style.display = 'none';
@@ -1963,6 +2013,7 @@
       }
 
       function initRadarMap() {
+        const isCanada = {{ is_canada|yesno:"true,false"|default:"false" }};
         radarMap = L.map('radarMap').setView([{{ lat }}, {{ lon }}], 7);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1970,11 +2021,21 @@
           maxZoom: 18
         }).addTo(radarMap);
 
-        L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png', {
-          attribution: 'NOAA/NWS via IEM',
-          opacity: 0.65,
-          transparent: true
-        }).addTo(radarMap);
+        if (isCanada) {
+          L.tileLayer.wms('https://geo.weather.gc.ca/geomet', {
+            layers: 'RADAR_1KM_RRAI',
+            format: 'image/png',
+            transparent: true,
+            opacity: 0.65,
+            attribution: '© <a href="https://www.canada.ca/en/environment-climate-change.html">Environment and Climate Change Canada</a> / MSC GeoMet'
+          }).addTo(radarMap);
+        } else {
+          L.tileLayer('https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png', {
+            attribution: 'NOAA/NWS via <a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>',
+            opacity: 0.65,
+            transparent: true
+          }).addTo(radarMap);
+        }
 
         L.marker([{{ lat }}, {{ lon }}])
           .addTo(radarMap)

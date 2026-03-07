@@ -236,6 +236,7 @@
        data-alert-description="{{ alert.description|escapejs }}"
        data-alert-instruction="{{ alert.instruction|default:'No specific instructions provided.'|escapejs }}"
        data-alert-urgency="{{ alert.urgency }}"
+       data-alert-url="{{ alert.url|default:'' }}"
        data-alert-lat="{{ lat }}"
        data-alert-lon="{{ lon }}">
     <span style="font-family:'Noto Color Emoji',sans-serif; font-size:1.3em; flex-shrink:0;">⚠️</span>
@@ -433,5 +434,15 @@
   <p style="text-align:center; color: var(--text-secondary);">No forecast data available.</p>
   {% endfor %}
 </div>
+
+{% if is_canada %}
+<p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 0 0;">
+  Weather data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
+</p>
+{% else %}
+<p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 0 0;">
+  Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a>
+</p>
+{% endif %}
 
 {% endif %}
