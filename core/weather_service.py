@@ -42,12 +42,12 @@ class LocationIQResult:
 
 class WeatherService:
     """Handles all National Weather Service API interactions"""
-    
+
     def __init__(self, locationiq_api_key=None):
         self.headers = {"User-Agent": "tempesttoday.pythonanywhere.com (tempesttoday@gmail.com)"}
         self.base_url = "https://api.weather.gov"
         self.locationiq_api_key = locationiq_api_key or os.getenv('LOCATIONIQ_API_KEY')
-    
+
     def get_location_coordinates(self, address, timeout=10):
         """
         Convert address to coordinates using geocoding.
@@ -186,77 +186,77 @@ class WeatherService:
 
         print(f"✗ All geocoders failed for: {address}")
         return None, None, None
-    
+
     def get_metadata(self, lat, lon):
         """
         Get NWS metadata for coordinates (includes forecast URL, stations URL)
-        
+
         Returns: dict with properties or None
         """
         url = f"{self.base_url}/points/{lat},{lon}"
         response = requests.get(url, headers=self.headers)
         data = response.json()
-        
+
         return data.get("properties")
-    
+
     def get_forecast(self, forecast_url):
         """
         Get weather forecast from NWS
-        
+
         Returns: list of forecast periods
         """
         response = requests.get(forecast_url, headers=self.headers)
         data = response.json()
-        
+
         return data.get("properties", {}).get("periods", [])
-    
+
     def get_nearest_station(self, stations_url):
         """
         Get the nearest weather station info
-        
+
         Returns: tuple (station_id, station_name, state_abbrev) or (None, None, None)
         """
         response = requests.get(stations_url, headers=self.headers)
         data = response.json()
-        
+
         features = data.get("features", [])
         if features:
             props = features[0]["properties"]
             station_id = props.get("stationIdentifier")
             station_name = props.get("name")
-            
+
             # Extract state from station timezone (e.g., "America/New_York" -> use ID parsing)
             # OR use the stationIdentifier (first letter often indicates region)
             # Better: parse from the name if it has comma-state format
             # OR get from timeZone field
-            
+
             # Try to extract state from the station's timeZone or name
             state = None
-            
+
             # Method 1: Some stations have state in parentheses in name
             # e.g., "Seattle-Tacoma International Airport (SEA)"
             # Method 2: Use the timeZone to infer state (not reliable)
             # Method 3: Parse from station identifier (K prefix = continental US)
-            
+
             # For now, we'll leave state extraction to be handled by the geocoded location
             # The NWS API doesn't consistently provide state abbreviations
-            
+
             return station_id, station_name, None
-        
+
         return None, None, None
-    
+
     def get_current_observations(self, station_id):
         """
         Get current weather observations from a station
-        
+
         Returns: dict of observation properties
         """
         url = f"{self.base_url}/stations/{station_id}/observations/latest"
         response = requests.get(url, headers=self.headers)
         data = response.json()
-        
+
         return data.get("properties", {})
-    
+
     def get_active_alerts(self, lat, lon):
         """
         Get active weather alerts for coordinates
@@ -301,12 +301,12 @@ class WeatherService:
             data = resp.json()
         except Exception as e:
             print(f"ECCC OGC API error: {e}")
-            return None, None
+            return None, None, None
 
         features = data.get('features', [])
         if not features:
             print(f"ECCC OGC API: no cities found near {lat},{lon}")
-            return None, None
+            return None, None, None
 
         # Pick the feature closest to the target coordinates
         def _dist(f):
