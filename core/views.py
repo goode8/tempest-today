@@ -1,5 +1,7 @@
 from django.shortcuts import render
 from django.core.cache import cache
+from django.db.models import F
+from .models import SearchLog
 from .weather_service import WeatherService
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from .utils import (
@@ -14,6 +16,87 @@ from collections import defaultdict
 import pytz
 import concurrent.futures
 
+# Map province/state names to their capital cities so that bare region
+# searches ("Quebec", "Ontario", "California") resolve to a real city.
+_REGION_CAPITALS = {
+    # Canadian provinces & territories
+    "alberta": "Edmonton, Alberta, Canada",
+    "british columbia": "Victoria, British Columbia, Canada",
+    "manitoba": "Winnipeg, Manitoba, Canada",
+    "new brunswick": "Fredericton, New Brunswick, Canada",
+    "newfoundland": "St. John's, Newfoundland, Canada",
+    "newfoundland and labrador": "St. John's, Newfoundland, Canada",
+    "northwest territories": "Yellowknife, Northwest Territories, Canada",
+    "nova scotia": "Halifax, Nova Scotia, Canada",
+    "nunavut": "Iqaluit, Nunavut, Canada",
+    "ontario": "Toronto, Ontario, Canada",
+    "prince edward island": "Charlottetown, Prince Edward Island, Canada",
+    "pei": "Charlottetown, Prince Edward Island, Canada",
+    "quebec": "Quebec City, Quebec, Canada",
+    "québec": "Quebec City, Quebec, Canada",
+    "saskatchewan": "Regina, Saskatchewan, Canada",
+    "yukon": "Whitehorse, Yukon, Canada",
+    # US states
+    "alabama": "Montgomery, AL",
+    "alaska": "Juneau, AK",
+    "arizona": "Phoenix, AZ",
+    "arkansas": "Little Rock, AR",
+    "california": "Sacramento, CA",
+    "colorado": "Denver, CO",
+    "connecticut": "Hartford, CT",
+    "delaware": "Dover, DE",
+    "florida": "Tallahassee, FL",
+    "georgia": "Atlanta, GA",
+    "hawaii": "Honolulu, HI",
+    "idaho": "Boise, ID",
+    "illinois": "Springfield, IL",
+    "indiana": "Indianapolis, IN",
+    "iowa": "Des Moines, IA",
+    "kansas": "Topeka, KS",
+    "kentucky": "Frankfort, KY",
+    "louisiana": "Baton Rouge, LA",
+    "maine": "Augusta, ME",
+    "maryland": "Annapolis, MD",
+    "massachusetts": "Boston, MA",
+    "michigan": "Lansing, MI",
+    "minnesota": "Saint Paul, MN",
+    "mississippi": "Jackson, MS",
+    "missouri": "Jefferson City, MO",
+    "montana": "Helena, MT",
+    "nebraska": "Lincoln, NE",
+    "nevada": "Carson City, NV",
+    "new hampshire": "Concord, NH",
+    "new jersey": "Trenton, NJ",
+    "new mexico": "Santa Fe, NM",
+    "new york": "Albany, NY",
+    "north carolina": "Raleigh, NC",
+    "north dakota": "Bismarck, ND",
+    "ohio": "Columbus, OH",
+    "oklahoma": "Oklahoma City, OK",
+    "oregon": "Salem, OR",
+    "pennsylvania": "Harrisburg, PA",
+    "rhode island": "Providence, RI",
+    "south carolina": "Columbia, SC",
+    "south dakota": "Pierre, SD",
+    "tennessee": "Nashville, TN",
+    "texas": "Austin, TX",
+    "utah": "Salt Lake City, UT",
+    "vermont": "Montpelier, VT",
+    "virginia": "Richmond, VA",
+    "washington": "Olympia, WA",
+    "west virginia": "Charleston, WV",
+    "wisconsin": "Madison, WI",
+    "wyoming": "Cheyenne, WY",
+}
+
+def _resolve_region_to_capital(address):
+    """
+    If `address` is just a province or state name, return the capital city
+    string instead so the geocoder gets a real city. Otherwise return as-is.
+    """
+    key = address.strip().lower()
+    return _REGION_CAPITALS.get(key, address)
+
 
 def index(request):
     """Main weather view - handles address input and displays forecast"""
@@ -22,13 +105,17 @@ def index(request):
     forecasts = []
     current_weather = {}
     address = ""
-    unit = request.POST.get("unit", "F")  # Get selected unit, default to F (Canada will override to C below)
-    
-    # Only process if form was submitted
-    if request.method != "POST":
-        return render(request, "core/index.html", {"unit": unit})
-    
-    address = request.POST.get("address")
+
+    # Support both GET (?q=...&unit=F) and POST (form submission)
+    if request.method == "GET":
+        address = request.GET.get("q", "").strip()
+        unit = "F"
+        if not address:
+            return render(request, "core/index.html", {"unit": unit})
+    else:
+        address = request.POST.get("address", "").strip()
+        unit = request.POST.get("unit", "F")
+
     weather_service = WeatherService()
     
     # If no address provided, show error but pick a random location for fun
@@ -66,6 +153,9 @@ def index(request):
             "Winnipeg, Manitoba",
         ]
         address = random.choice(random_locations)
+
+    # Resolve bare province/state names to their capital city
+    address = _resolve_region_to_capital(address)
 
     # Step 1: Get coordinates from address (with geocoding cache)
     # Cache geocoding results for 30 days to avoid hitting rate limits
@@ -150,6 +240,23 @@ def index(request):
                     "error_type": "international",
                     "unit": unit
                 })
+
+    # Log the search
+    try:
+        region = None
+        if location and hasattr(location, 'raw'):
+            parts = location.raw.get('address', {})
+            city  = parts.get('city') or parts.get('town') or parts.get('village') or ''
+            state = parts.get('ISO3166-2-lvl4', '').split('-')[-1] or parts.get('state', '')
+            region = f"{city}, {state}".strip(', ')
+        obj, created = SearchLog.objects.get_or_create(
+            query=address,
+            defaults={'region': region, 'is_random': show_random_location_message}
+        )
+        if not created:
+            SearchLog.objects.filter(pk=obj.pk).update(count=F('count') + 1)
+    except Exception:
+        pass  # never let logging break the app
 
     # Check cache first (round coordinates to 2 decimal places for cache key)
     cache_key = f"weather_{round(lat, 2)}_{round(lon, 2)}"
@@ -722,6 +829,7 @@ def compact_forecast(request):
     if not address:
         return render_error("No address provided.")
 
+    address = _resolve_region_to_capital(address)
     weather_service = WeatherService()
 
     geocode_cache_key = f"geocode_{address.lower().replace(chr(32), chr(95))}"

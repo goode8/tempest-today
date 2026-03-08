@@ -2066,6 +2066,15 @@
           weatherResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
           // Load compact view immediately (it's the default)
           loadCompactView();
+
+          // Update URL to shareable GET params (preserves state on refresh/bookmark)
+          const q = '{{ address|escapejs }}';
+          if (q && history.replaceState) {
+            const url = new URL(window.location.href);
+            url.search = '';
+            url.searchParams.set('q', q);
+            history.replaceState(null, '', url.toString());
+          }
         }
       });
     </script>

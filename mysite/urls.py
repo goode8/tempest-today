@@ -1,6 +1,10 @@
+import os
 from django.http import HttpResponse
 from django.urls import path
 from core.views import index, compact_forecast
+from django.contrib import admin
+
+SECRET_ADMIN_URL_PATH = os.environ.get('SECRET_ADMIN_URL_PATH', 'default-fallback')
 
 def robots_txt(request):
     lines = [
@@ -38,4 +42,5 @@ urlpatterns = [
     path("", index, name="index"),
     path("compact/", compact_forecast, name="compact_forecast"),
     path("robots.txt", robots_txt),
+    path(f"{SECRET_ADMIN_URL_PATH}/", admin.site.urls), 
 ]
