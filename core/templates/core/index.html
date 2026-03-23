@@ -1364,6 +1364,7 @@
         updateCurrentModalNavArrows();
         document.getElementById('currentWeatherModal').classList.add('active');
         document.body.style.overflow = 'hidden';
+        _pushModalHistory();
       }
 
       function closeCurrentWeatherModal() {
@@ -1519,6 +1520,7 @@
 
         document.getElementById('glanceModal').classList.add('active');
         document.body.style.overflow = 'hidden';
+        _pushModalHistory();
       }
 
       function closeGlanceModal() {
@@ -1529,6 +1531,7 @@
       function openMoonModal() {
         document.getElementById('moonModal').classList.add('active');
         document.body.style.overflow = 'hidden';
+        _pushModalHistory();
       }
 
       function closeMoonModal() {
@@ -1584,6 +1587,7 @@
         // Open modal
         document.getElementById('alertModal').classList.add('active');
         document.body.style.overflow = 'hidden';
+        _pushModalHistory();
       }
 
       function closeAlertModal() {
@@ -1757,6 +1761,7 @@
         // Open modal
         document.getElementById('forecastModal').classList.add('active');
         document.body.style.overflow = 'hidden';
+        _pushModalHistory();
       }
 
       // Close modal on Escape key
@@ -1767,6 +1772,26 @@
           closeMoonModal();
           closeAlertModal();
         }
+      });
+
+      // Android back button: push a history state when a modal opens so that
+      // the back button closes the modal instead of navigating away.
+      let _modalHistoryPushed = false;
+      function _pushModalHistory() {
+        if (!_modalHistoryPushed) {
+          history.pushState({ modal: true }, '');
+          _modalHistoryPushed = true;
+        }
+      }
+      window.addEventListener('popstate', function() {
+        if (document.querySelector('.modal-overlay.active')) {
+          closeCurrentWeatherModal();
+          closeForecastModal();
+          closeGlanceModal();
+          closeMoonModal();
+          closeAlertModal();
+        }
+        _modalHistoryPushed = false;
       });
 
       // Handle MODAL temperature toggle clicks (separate from main page toggle)
