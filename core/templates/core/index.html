@@ -183,6 +183,10 @@
       color: #f3f4f6;
     }
 
+    input[type="text"] {
+      width: 360px;
+    }
+
     button[type="submit"] {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -481,6 +485,7 @@
       <button type="submit">Check Weather</button>
 
       <div class="toggle-group">
+        {% if forecasts %}
         <button type="button" id="unitToggleBtn" onclick="toggleUnit()" class="view-toggle {% if unit == 'C' %}details-mode{% endif %}" aria-label="Toggle temperature unit">
           <div class="view-toggle-track">
             <div class="view-toggle-thumb"></div>
@@ -488,7 +493,6 @@
             <span class="view-label">°C</span>
           </div>
         </button>
-        {% if forecasts %}
         <button type="button" id="viewToggleBtn" onclick="toggleCompactView()" class="view-toggle" aria-label="Toggle view">
           <div class="view-toggle-track">
             <div class="view-toggle-thumb"></div>
@@ -673,7 +677,7 @@
 
           {% if current.air_quality %}
           <div style="margin-top: 8px; font-size: 0.8em; color: var(--text-secondary);">
-            {{ current.air_quality.label }}: <strong>{{ current.air_quality.value }}</strong> — {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}
+            {{ current.air_quality.label }}: <span style="display: inline-block; background: {{ current.air_quality.color }}; color: #fff; font-weight: 700; font-size: 0.95em; padding: 1px 7px; border-radius: 999px; vertical-align: middle;">{{ current.air_quality.value }}</span> {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}
           </div>
           {% endif %}
         </div>
@@ -837,11 +841,11 @@
         {% endfor %}
 
         {% if is_canada %}
-        <p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 4px 0; width: 100%;">
+        <p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 4px 0; width: 100%; grid-column: 1 / -1;">
           Weather &amp; Air Quality Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
         </p>
         {% else %}
-        <p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 4px 0; width: 100%;">
+        <p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 4px 0; width: 100%; grid-column: 1 / -1;">
           Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a> &middot; Air quality data provided by <a href="https://www.airnow.gov/" target="_blank" style="color: inherit;">AirNow / U.S. EPA</a>
         </p>
         {% endif %}
@@ -954,7 +958,7 @@
                   <div class="modal-data-item">
                     <div class="modal-data-label">{{ current.air_quality.label }}</div>
                     <div class="modal-data-value">
-                      {{ current.air_quality.value }} — {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}
+                      <span style="display: inline-block; background: {{ current.air_quality.color }}; color: #fff; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle;">{{ current.air_quality.value }}</span> {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}
                     </div>
                   </div>
                   {% endif %}
@@ -1276,7 +1280,7 @@
                 {% if current.air_quality %}
                 <div class="modal-data-item">
                   <div class="modal-data-label">{{ current.air_quality.label }}</div>
-                  <div class="modal-data-value">{{ current.air_quality.value }} — {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}</div>
+                  <div class="modal-data-value"><span style="display: inline-block; background: {{ current.air_quality.color }}; color: #fff; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle;">{{ current.air_quality.value }}</span> {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}</div>
                 </div>
                 {% endif %}
               </div>

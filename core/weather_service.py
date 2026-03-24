@@ -505,11 +505,22 @@ class WeatherService:
                 return None
             # AirNow returns one entry per pollutant; report the highest AQI
             best = max(data, key=lambda x: x.get('AQI', 0))
+            aqi_value = best.get('AQI', 0) or 0
+            aqi_color_map = {
+                1: '#00c853',  # Good
+                2: '#d4b800',  # Moderate
+                3: '#e65100',  # Unhealthy for Sensitive Groups
+                4: '#b71c1c',  # Unhealthy
+                5: '#6a1b9a',  # Very Unhealthy
+                6: '#4a0072',  # Hazardous
+            }
+            cat_num = best.get('Category', {}).get('Number', 1)
             return {
                 'label': 'AQI',
-                'value': best.get('AQI'),
+                'value': aqi_value,
                 'category': best.get('Category', {}).get('Name', ''),
                 'pollutant': best.get('ParameterName', ''),
+                'color': aqi_color_map.get(cat_num, '#00c853'),
             }
         except Exception as e:
             print(f"AirNow API error: {e}")
@@ -550,19 +561,25 @@ class WeatherService:
                 v = float(aqhi_value)
                 if v <= 3:
                     category = 'Low'
+                    color = '#0288d1'
                 elif v <= 6:
                     category = 'Moderate'
+                    color = '#d4a000'
                 elif v <= 10:
                     category = 'High'
+                    color = '#b71c1c'
                 else:
                     category = 'Very High'
+                    color = '#6a1b9a'
                 aqhi_value = int(round(v)) if v == int(v) else v
             except (ValueError, TypeError):
                 category = ''
+                color = ''
             return {
                 'label': 'AQHI',
                 'value': aqhi_value,
                 'category': category,
+                'color': color,
             }
         except Exception as e:
             print(f"ECCC AQHI API error: {e}")
