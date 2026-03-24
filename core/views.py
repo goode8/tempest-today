@@ -304,12 +304,14 @@ def index(request):
         if unit == 'F':
             unit = 'C'
 
-        # Fetch from ECCC MSC Datamart + astronomy in parallel
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        # Fetch from ECCC MSC Datamart + astronomy + AQHI in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             eccc_future = executor.submit(weather_service.get_eccc_weather, lat, lon)
             astronomy_future = executor.submit(get_astronomy_data, lat, lon)
+            air_quality_future = executor.submit(weather_service.get_air_quality, lat, lon, True)
             eccc_result = eccc_future.result()
             astronomy = astronomy_future.result()
+            air_quality = air_quality_future.result()
 
         if eccc_result is None or eccc_result == (None, None, None):
             return render(request, "core/index.html", {
@@ -323,6 +325,8 @@ def index(request):
             })
 
         forecasts, current_weather, eccc_alerts = eccc_result
+
+        current_weather['air_quality'] = air_quality
 
         # Convert Fahrenheit → Celsius (ECCC XML parsed to F for cache consistency)
         for period in forecasts:
@@ -400,11 +404,12 @@ def index(request):
             state_abbrev = address_components.get('state')
 
     # Step 3-6: Make API calls in parallel for faster loading
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         # Submit all API calls at once
         forecast_future = executor.submit(weather_service.get_forecast, metadata["forecast"])
         alerts_future = executor.submit(weather_service.get_active_alerts, lat, lon)
         astronomy_future = executor.submit(get_astronomy_data, lat, lon)
+        air_quality_future = executor.submit(weather_service.get_air_quality, lat, lon, False)
 
         # Also get current weather in parallel (which internally calls get_nearest_station and get_current_observations)
         current_weather_future = executor.submit(get_current_weather, weather_service, metadata, unit, state_abbrev)
@@ -413,7 +418,10 @@ def index(request):
         forecasts = forecast_future.result()
         active_alerts = alerts_future.result()
         astronomy = astronomy_future.result()
+        air_quality = air_quality_future.result()
         current_weather = current_weather_future.result()
+
+    current_weather['air_quality'] = air_quality
 
     # Convert forecast temperatures if needed
     if unit == 'C':

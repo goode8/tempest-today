@@ -469,3 +469,101 @@ class WeatherService:
                 })
 
         return forecasts, current_weather, active_alerts
+
+    # ── Air Quality ────────────────────────────────────────────────────────────
+
+    def get_air_quality(self, lat, lon, is_canada):
+        """
+        Fetch current air quality for the given coordinates.
+        US: AQI from AirNow EPA (requires AIRNOW_API_KEY).
+        Canada: AQHI from ECCC MSC GeoMet (no key needed).
+        Returns a dict with 'label', 'value', 'category', and (US only) 'pollutant',
+        or None if unavailable.
+        """
+        if is_canada:
+            return self._get_aqhi(lat, lon)
+        return self._get_aqi(lat, lon)
+
+    def _get_aqi(self, lat, lon):
+        """Fetch US AQI from AirNow EPA. Returns dict or None."""
+        api_key = os.getenv('AIRNOW_API_KEY')
+        if not api_key:
+            return None
+        try:
+            url = "https://www.airnowapi.org/aq/observation/latLong/current/"
+            params = {
+                'format': 'application/json',
+                'latitude': lat,
+                'longitude': lon,
+                'distance': 25,
+                'API_KEY': api_key,
+            }
+            resp = requests.get(url, params=params, headers=self.headers, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            if not data:
+                return None
+            # AirNow returns one entry per pollutant; report the highest AQI
+            best = max(data, key=lambda x: x.get('AQI', 0))
+            return {
+                'label': 'AQI',
+                'value': best.get('AQI'),
+                'category': best.get('Category', {}).get('Name', ''),
+                'pollutant': best.get('ParameterName', ''),
+            }
+        except Exception as e:
+            print(f"AirNow API error: {e}")
+            return None
+
+    def _get_aqhi(self, lat, lon):
+        """Fetch Canadian AQHI from ECCC MSC GeoMet. Returns dict or None."""
+        delta = 1.0
+        bbox = f"{lon - delta},{lat - delta},{lon + delta},{lat + delta}"
+        try:
+            url = "https://api.weather.gc.ca/collections/aqhi-forecasts-realtime/items"
+            resp = requests.get(
+                url,
+                params={'f': 'json', 'limit': 10, 'bbox': bbox},
+                headers=self.headers,
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            features = data.get('features', [])
+            if not features:
+                return None
+            # Pick nearest feature to target coordinates
+            def _dist(f):
+                c = f.get('geometry', {}).get('coordinates', [0, 0])
+                return (c[1] - lat) ** 2 + (c[0] - lon) ** 2
+            feature = min(features, key=_dist)
+            props = feature.get('properties', {})
+            # Try common field names for AQHI value
+            aqhi_value = (
+                props.get('aqhi')
+                or props.get('airQualityHealthIndex')
+                or props.get('aqhiValue')
+            )
+            if aqhi_value is None:
+                return None
+            try:
+                v = float(aqhi_value)
+                if v <= 3:
+                    category = 'Low'
+                elif v <= 6:
+                    category = 'Moderate'
+                elif v <= 10:
+                    category = 'High'
+                else:
+                    category = 'Very High'
+                aqhi_value = int(round(v)) if v == int(v) else v
+            except (ValueError, TypeError):
+                category = ''
+            return {
+                'label': 'AQHI',
+                'value': aqhi_value,
+                'category': category,
+            }
+        except Exception as e:
+            print(f"ECCC AQHI API error: {e}")
+            return None

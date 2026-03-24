@@ -670,6 +670,12 @@
               <span style="font-size: 0.8em;">No wind</span>
             {% endif %}
           </div>
+
+          {% if current.air_quality %}
+          <div style="margin-top: 8px; font-size: 0.8em; color: var(--text-secondary);">
+            {{ current.air_quality.label }}: <strong>{{ current.air_quality.value }}</strong> — {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}
+          </div>
+          {% endif %}
         </div>
         {% endwith %}
 
@@ -832,11 +838,11 @@
 
         {% if is_canada %}
         <p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 4px 0; width: 100%;">
-          Weather data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
+          Weather &amp; Air Quality Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
         </p>
         {% else %}
         <p style="text-align: center; font-size: 0.75em; color: var(--text-secondary); margin: 14px 0 4px 0; width: 100%;">
-          Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a>
+          Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a> &middot; Air quality data provided by <a href="https://www.airnow.gov/" target="_blank" style="color: inherit;">AirNow / U.S. EPA</a>
         </p>
         {% endif %}
 
@@ -941,6 +947,15 @@
                   <div class="modal-data-item">
                     <div class="modal-data-label">Humidity</div>
                     <div class="modal-data-value">{{ current.humidity }}%</div>
+                  </div>
+                  {% endif %}
+
+                  {% if current.air_quality %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">{{ current.air_quality.label }}</div>
+                    <div class="modal-data-value">
+                      {{ current.air_quality.value }} — {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}
+                    </div>
                   </div>
                   {% endif %}
 
@@ -1258,6 +1273,12 @@
                   <div class="modal-data-label">Recommendation</div>
                   <div id="glanceModalHint" class="modal-data-value"></div>
                 </div>
+                {% if current.air_quality %}
+                <div class="modal-data-item">
+                  <div class="modal-data-label">{{ current.air_quality.label }}</div>
+                  <div class="modal-data-value">{{ current.air_quality.value }} — {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}</div>
+                </div>
+                {% endif %}
               </div>
             </div>
 
@@ -1409,7 +1430,11 @@
         document.getElementById('glanceModalForecast').textContent = forecast;
 
         // Temperatures — store originals for the unit toggle
-        const currentUnit = document.getElementById('unit-input').value;
+        const modalOpen = document.getElementById('glanceModal').classList.contains('active');
+        const modalToggle = document.getElementById('glanceModalUnitToggle');
+        const currentUnit = modalOpen
+          ? (modalToggle.classList.contains('details-mode') ? 'C' : 'F')
+          : document.getElementById('unit-input').value;
         function convertTemp(val, fromUnit, toUnit) {
           let t = parseInt(val);
           if (fromUnit === toUnit) return t;
@@ -1424,8 +1449,8 @@
         highEl.textContent = high ? convertTemp(high, serverUnit, currentUnit) + '°' : '–';
         lowEl.textContent  = low  ? convertTemp(low,  serverUnit, currentUnit) + '°' : '–';
 
-        // Sync unit toggle to current page unit
-        document.getElementById('glanceModalUnitToggle').classList.toggle('details-mode', currentUnit === 'C');
+        // Sync unit toggle — preserve modal state when navigating, otherwise follow page unit
+        modalToggle.classList.toggle('details-mode', currentUnit === 'C');
 
         // Derive the actual weekday name from the date for NWS card matching
         // (Open-Meteo labels "Tomorrow" but NWS uses the real day name like "Wednesday")
