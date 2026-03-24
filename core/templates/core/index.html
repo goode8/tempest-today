@@ -1278,7 +1278,7 @@
                   <div id="glanceModalHint" class="modal-data-value"></div>
                 </div>
                 {% if current.air_quality %}
-                <div class="modal-data-item">
+                <div id="glanceModalAqiContainer" class="modal-data-item" style="display:none;">
                   <div class="modal-data-label">{{ current.air_quality.label }}</div>
                   <div class="modal-data-value"><span style="display: inline-block; background: {{ current.air_quality.color }}; color: #fff; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle;">{{ current.air_quality.value }}</span> {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}</div>
                 </div>
@@ -1458,12 +1458,12 @@
 
         // Derive the actual weekday name from the date for NWS card matching
         // (Open-Meteo labels "Tomorrow" but NWS uses the real day name like "Wednesday")
+        const todayISO = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
         let searchDayName, searchNightName;
         if (dateStr) {
           const d = new Date(dateStr + 'T12:00:00');
           const weekday = d.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
           // Check if this is today using local date string
-          const todayISO = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
           if (dateStr === todayISO) {
             searchDayName = 'today';   // NWS may say "Today" or "This Afternoon"
             searchNightName = 'tonight';
@@ -1541,6 +1541,13 @@
           hintContainer.style.display = 'block';
         } else {
           hintContainer.style.display = 'none';
+        }
+
+        // AQI — only show for today
+        const aqiContainer = document.getElementById('glanceModalAqiContainer');
+        if (aqiContainer) {
+          const isToday = dateStr ? dateStr === todayISO : label.toLowerCase() === 'today';
+          aqiContainer.style.display = isToday ? '' : 'none';
         }
 
         // Track current row and update nav arrows
