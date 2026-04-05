@@ -99,12 +99,14 @@ def build_7day_compact(forecasts):
             continue  # skip current conditions as requested
         entry = days[key]
         precip_val = entry["max_precip"]
+        short_forecast_lower = (entry["short_forecast"] or "").lower()
+        rain_in_text = any(w in short_forecast_lower for w in ("rain", "shower", "drizzle"))
         result.append({
             "label": entry["label"],
             "high": entry["high"],
             "low": entry["low"],
             "precip": precip_val,
-            "umbrella": precip_val is not None and precip_val >= 30,
+            "umbrella": rain_in_text or (precip_val is not None and precip_val >= 30),
             "short_forecast": entry["short_forecast"],
         })
         if len(result) >= 7:

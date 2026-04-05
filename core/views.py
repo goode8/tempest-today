@@ -268,20 +268,8 @@ def index(request):
         active_alerts = cached_data['active_alerts']
         cached_is_canada = cached_data.get('is_canada', False)
 
-        # Canada cache is already in Celsius; US cache is in Fahrenheit
-        if cached_is_canada:
-            unit = 'C'
-        elif unit == 'C':
-            # US data: convert F → C on the fly
-            for period in forecasts:
-                period['temperature'] = convert_temperature(
-                    period['temperature'], from_unit='F', to_unit='C'
-                )
-                period['temperatureUnit'] = 'C'
-            if current_weather.get('temp') and current_weather['temp'] != "N/A":
-                current_weather['temp'] = convert_temperature(
-                    current_weather['temp'], from_unit='F', to_unit='C'
-                )
+        # Unit is always determined by country, not form state
+        unit = 'C' if cached_is_canada else 'F'
 
         return render(
             request,
@@ -299,11 +287,10 @@ def index(request):
             }
         )
 
-    if is_canada:
-        # Canada defaults to Celsius
-        if unit == 'F':
-            unit = 'C'
+    # Unit is always determined by country, not form state
+    unit = 'C' if is_canada else 'F'
 
+    if is_canada:
         # Fetch from ECCC MSC Datamart + astronomy + AQHI in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             eccc_future = executor.submit(weather_service.get_eccc_weather, lat, lon)
@@ -412,7 +399,8 @@ def index(request):
         air_quality_future = executor.submit(weather_service.get_air_quality, lat, lon, False)
 
         # Also get current weather in parallel (which internally calls get_nearest_station and get_current_observations)
-        current_weather_future = executor.submit(get_current_weather, weather_service, metadata, unit, state_abbrev)
+        # Always fetch in Fahrenheit so cache stores consistent F data
+        current_weather_future = executor.submit(get_current_weather, weather_service, metadata, 'F', state_abbrev)
 
         # Wait for all to complete and get results
         forecasts = forecast_future.result()
@@ -422,16 +410,6 @@ def index(request):
         current_weather = current_weather_future.result()
 
     current_weather['air_quality'] = air_quality
-
-    # Convert forecast temperatures if needed
-    if unit == 'C':
-        for period in forecasts:
-            period['temperature'] = convert_temperature(
-                period['temperature'],
-                from_unit='F',
-                to_unit='C'
-            )
-            period['temperatureUnit'] = 'C'
 
     # Add astronomy data to current weather
     current_weather.update(astronomy)
@@ -473,7 +451,7 @@ def index(request):
         current_weather["detailed_forecast"] = ""
 
     # Cache the weather data for 10 minutes (600 seconds)
-    # Store in Fahrenheit to make unit conversion easier on cached data
+    # Always store in Fahrenheit so cached data is unit-agnostic
     cache_data = {
         'forecasts': forecasts,
         'current': current_weather,
@@ -482,6 +460,25 @@ def index(request):
         'is_canada': False,
     }
     cache.set(cache_key, cache_data, 600)  # 10 minutes
+
+    # Convert to Celsius after caching (cache always stores F for US locations)
+    if unit == 'C':
+        for period in forecasts:
+            period['temperature'] = convert_temperature(
+                period['temperature'],
+                from_unit='F',
+                to_unit='C'
+            )
+            period['temperatureUnit'] = 'C'
+        if current_weather.get('temp') and current_weather['temp'] != "N/A":
+            current_weather['temp'] = convert_temperature(
+                current_weather['temp'], from_unit='F', to_unit='C'
+            )
+        for key in ('heat_index', 'wind_chill', 'max_temp_24h', 'min_temp_24h'):
+            if current_weather.get(key) is not None:
+                current_weather[key] = convert_temperature(
+                    current_weather[key], from_unit='F', to_unit='C'
+                )
 
     return render(
         request,
@@ -792,7 +789,9 @@ def build_7day_compact(forecasts):
         entry = days[key]
         precip_val = entry["max_precip"]
         has_snow = entry["has_snow"]
-        umbrella = (precip_val is not None and precip_val >= 30 and not has_snow)
+        short_forecast_lower = (entry["short_forecast"] or "").lower()
+        rain_in_text = any(w in short_forecast_lower for w in ("rain", "shower", "drizzle"))
+        umbrella = not has_snow and (rain_in_text or (precip_val is not None and precip_val >= 30))
         inches = entry["max_precip_inches"]
         if inches is not None:
             threshold = 4.0 if has_snow else 1.0
