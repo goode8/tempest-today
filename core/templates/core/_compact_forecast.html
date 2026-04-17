@@ -147,7 +147,6 @@
     opacity: 0.45;
     font-size: 1.3em;
     flex-shrink: 0;
-    align-self: center;
     line-height: 1;
   }
 
@@ -255,7 +254,7 @@
        data-alert-lon="{{ lon }}">
     <span style="font-family:'Noto Color Emoji',sans-serif; font-size:1.3em; flex-shrink:0;">⚠️</span>
     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; color:var(--text-primary);">{{ alert.event }}</span>
-    <span class="row-chevron" style="margin-left:auto;">›</span>
+    <span class="row-chevron" style="margin-left:auto;">→</span>
   </div>
   {% endfor %}
 
@@ -358,7 +357,7 @@
       <td style="color: var(--text-secondary); font-size: 0.88em;">
         {{ day.short_forecast }}
       </td>
-      <td class="row-chevron">›</td>
+      <td class="row-chevron">→</td>
     </tr>
     {% empty %}
     <tr>
@@ -424,29 +423,30 @@
       </div>
     </div>
 
-    <div class="cc-right">
-      <span class="cc-precip {% if day.precip is not None %}{% if day.precip >= 60 %}precip-high{% elif day.precip >= 30 %}precip-med{% else %}precip-low{% endif %}{% endif %}">
-        {% if day.precip is not None %}{{ day.precip }}%{% else %}–{% endif %}
-      </span>
-      {% if day.precip_label %}
-        <span style="font-size:0.75em; color:var(--text-secondary);">{{ day.precip_label }}</span>
-      {% endif %}
-      <span class="cc-umbrella">
-        {% with f=day.short_forecast|lower %}
-          {% if "snow" in f or day.snow %}
-            {% if "rain" in f or "shower" in f or "drizzle" in f or day.umbrella %}
-              ☂️🥾
-            {% else %}
-              🥾
+    <div style="display:flex; align-items:flex-start; gap:2px;">
+      <div class="cc-right">
+        <span class="cc-precip {% if day.precip is not None %}{% if day.precip >= 60 %}precip-high{% elif day.precip >= 30 %}precip-med{% else %}precip-low{% endif %}{% endif %}">
+          {% if day.precip is not None %}{{ day.precip }}%{% else %}–{% endif %}
+        </span>
+        {% if day.precip_label %}
+          <span style="font-size:0.75em; color:var(--text-secondary);">{{ day.precip_label }}</span>
+        {% endif %}
+        <span class="cc-umbrella">
+          {% with f=day.short_forecast|lower %}
+            {% if "snow" in f or day.snow %}
+              {% if "rain" in f or "shower" in f or "drizzle" in f or day.umbrella %}
+                ☂️🥾
+              {% else %}
+                🥾
+              {% endif %}
+            {% elif "rain" in f or "shower" in f or "drizzle" in f or day.umbrella %}
+              ☂️
             {% endif %}
-          {% elif "rain" in f or "shower" in f or "drizzle" in f or day.umbrella %}
-            ☂️
-          {% endif %}
-        {% endwith %}
-       </span>
+          {% endwith %}
+         </span>
+      </div>
+      <span class="row-chevron">→</span>
     </div>
-
-    <span class="row-chevron">›</span>
 
   </div>
   {% empty %}

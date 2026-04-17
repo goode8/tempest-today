@@ -54,7 +54,7 @@
     }
 
     .clickable-card::after {
-      content: '›';
+      content: '→';
       position: absolute;
       top: 8px;
       right: 10px;
@@ -156,7 +156,7 @@
       opacity: 0.45;
       font-size: 1.3em;
       flex-shrink: 0;
-      align-self: center;
+      align-self: flex-start;
       line-height: 1;
     }
 
@@ -1065,13 +1065,22 @@
               </div>
 
               {% comment %} Station Info {% endcomment %}
-              {% if current.station_full_name %}
-              <div class="modal-section" style="border-bottom: none;">
-                <p style="font-size: 0.85em; color: var(--text-secondary); margin: 0; text-align: center;">
-                  Data from: {{ current.station_full_name }}
+              <div class="modal-section" style="border-bottom: none; text-align: center;">
+                {% if current.station_full_name %}
+                <p style="font-size: 0.85em; color: var(--text-secondary); margin: 0 0 6px 0;">
+                  {{ address }} · {{ current.station_full_name }}
                 </p>
+                {% endif %}
+                {% if is_canada %}
+                <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
+                  Weather &amp; Air Quality Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
+                </p>
+                {% else %}
+                <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
+                  Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a> &middot; Air quality data provided by <a href="https://www.airnow.gov/" target="_blank" style="color: inherit;">AirNow / U.S. EPA</a>
+                </p>
+                {% endif %}
               </div>
-              {% endif %}
 
             </div>
           </div>
@@ -1136,17 +1145,30 @@
                     <div class="modal-data-label">Humidity</div>
                     <div id="forecastModalHumidity" class="modal-data-value"></div>
                   </div>
+                  <div id="forecastModalHintContainer" class="modal-data-item" style="display: none;">
+                    <div class="modal-data-label">Recommendation</div>
+                    <div id="forecastModalHint" class="modal-data-value"></div>
+                  </div>
                 </div>
               </div>
 
               {% comment %} Data Source {% endcomment %}
-              {% if current.station_full_name %}
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
-                <p style="font-size: 0.85em; color: var(--text-secondary); margin: 0;">
-                  Data from: {{ current.station_full_name }}
+                {% if current.station_full_name %}
+                <p style="font-size: 0.85em; color: var(--text-secondary); margin: 0 0 6px 0;">
+                  {{ address }} · {{ current.station_full_name }}
                 </p>
+                {% endif %}
+                {% if is_canada %}
+                <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
+                  Weather &amp; Air Quality Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
+                </p>
+                {% else %}
+                <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
+                  Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a> &middot; Air quality data provided by <a href="https://www.airnow.gov/" target="_blank" style="color: inherit;">AirNow / U.S. EPA</a>
+                </p>
+                {% endif %}
               </div>
-              {% endif %}
 
             </div>
           </div>
@@ -1168,7 +1190,7 @@
             <div class="sky-label-main">{{ current.moon_name }}</div>
             <div class="sky-label-sub">{{ current.moon_illumination }}% lit</div>
           </div>
-          <span class="row-chevron" style="margin-left:auto;">›</span>
+          <span class="row-chevron" style="margin-left:auto;">→</span>
         </div>
 
         <div class="sky-divider" style="margin: 0 8px;"></div>
@@ -1357,6 +1379,23 @@
               </div>
             </div>
 
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center;">
+              {% if current.station_full_name %}
+              <p style="font-size: 0.85em; color: var(--text-secondary); margin: 0 0 6px 0;">
+                {{ address }} · {{ current.station_full_name }}
+              </p>
+              {% endif %}
+              {% if is_canada %}
+              <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
+                Weather &amp; Air Quality Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
+              </p>
+              {% else %}
+              <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
+                Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a> &middot; Air quality data provided by <a href="https://www.airnow.gov/" target="_blank" style="color: inherit;">AirNow / U.S. EPA</a>
+              </p>
+              {% endif %}
+            </div>
+
           </div>
         </div>
       </div>
@@ -1436,6 +1475,7 @@
         const originalUnit = '{{ unit|default:"F" }}';
 
         document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
+          if (!tempElement.dataset.originalTemp) { tempElement.dataset.originalTemp = tempElement.dataset.temp; }
           const originalTemp = parseFloat(tempElement.dataset.originalTemp);
 
           if (isNaN(originalTemp)) return;
@@ -1900,6 +1940,19 @@
           humidityContainer.style.display = 'block';
         } else {
           humidityContainer.style.display = 'none';
+        }
+
+        // Hints
+        const hintContainer = document.getElementById('forecastModalHintContainer');
+        const shortLower = (shortForecast || '').toLowerCase();
+        const hints = [];
+        if (shortLower.includes('rain') || shortLower.includes('shower') || shortLower.includes('drizzle')) hints.push('☂️ Pack an umbrella.');
+        if (shortLower.includes('snow') || shortLower.includes('sleet') || shortLower.includes('blizzard')) hints.push('🥾 Grab your boots.');
+        if (hints.length) {
+          document.getElementById('forecastModalHint').textContent = hints.join('  ');
+          hintContainer.style.display = 'block';
+        } else {
+          hintContainer.style.display = 'none';
         }
 
         // Track current card and update nav arrows
