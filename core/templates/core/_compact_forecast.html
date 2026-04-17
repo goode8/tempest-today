@@ -198,28 +198,6 @@
     .compact-table  { display: none; }
     .compact-cards  { display: flex; }
   }
-
-  /* ── Dog-ear: folded corner on tappable cards ───────── */
-  .dog-ear {
-    position: relative;
-  }
-  .dog-ear::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 18px;
-    height: 18px;
-    background: linear-gradient(
-      225deg,
-      rgba(0,0,0,0.07) 43%,
-      rgba(0,0,0,0.25) 43%,
-      rgba(0,0,0,0.25) 57%,
-      transparent 57%
-    );
-    border-radius: 0 8px 0 0;
-    pointer-events: none;
-  }
 </style>
 
 <div class="compact-header">
@@ -244,7 +222,7 @@
   {% endif %}
 
   {% for alert in active_alerts %}
-  <div class="dog-ear" style="flex:1; min-width:0; background:var(--card-bg); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.88em; transition:opacity 0.15s;
+  <div style="flex:1; min-width:0; background:var(--card-bg); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.88em; overflow:hidden; transition:opacity 0.15s;
     {% if alert.severity|lower == 'extreme' %}border-left:3px solid #c62828;
     {% elif alert.severity|lower == 'severe' %}border-left:3px solid #e64a19;
     {% elif alert.severity|lower == 'moderate' %}border-left:3px solid #f57c00;
@@ -387,7 +365,7 @@
   </div>
 
   {% for day in days %}
-  <div class="compact-card dog-ear"
+  <div class="compact-card"
        onclick="openGlanceModal(this)"
        data-glance-label="{{ day.label }}"
        data-glance-high="{{ day.high|default:'' }}"

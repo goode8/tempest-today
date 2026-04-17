@@ -136,27 +136,6 @@
       overflow: hidden;
     }
 
-    .dog-ear {
-      position: relative;
-    }
-    .dog-ear::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 18px;
-      height: 18px;
-      background: linear-gradient(
-        225deg,
-        rgba(0,0,0,0.07) 43%,
-        rgba(0,0,0,0.25) 43%,
-        rgba(0,0,0,0.25) 57%,
-        transparent 57%
-      );
-      border-radius: 0 8px 0 0;
-      pointer-events: none;
-    }
-
     .sky-divider {
       width: 1px;
       height: 40px;
@@ -1157,7 +1136,7 @@
       <div id="glanceSkyWidget" style="margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; background: var(--bg-secondary); display: flex; align-items: center;">
 
         <!-- Moon (clickable → moon modal) -->
-        <div onclick="openMoonModal()" title="Moon details" class="sky-section dog-ear"
+        <div onclick="openMoonModal()" title="Moon details" class="sky-section"
              style="flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 8px; padding: 4px 6px; transition: background 0.15s;"
              onmouseover="this.style.background='var(--card-bg)'" onmouseout="this.style.background='transparent'">
           <span class="sky-emoji" style="font-family:'Noto Color Emoji',sans-serif;">{{ current.moon_emoji }}</span>
