@@ -106,14 +106,10 @@
 
     /* Dark/light mode toggle slider */
     .theme-toggle {
-      position: fixed;
-      top: 18px;
-      right: 18px;
       background: none;
       border: none;
       padding: 0;
       cursor: pointer;
-      z-index: 1000;
     }
 
     .toggle-track {
@@ -201,19 +197,16 @@
   </head>
   <body>
 
-    <button class="theme-toggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
-      <div class="toggle-track">
-        <span class="toggle-sun">☀️</span>
-        <span class="toggle-moon">🌙</span>
-        <div class="toggle-thumb"></div>
-      </div>
-    </button>
-
     <header class="site-header">
-
-    <header class="site-header">
-      <div class="container header-flex" style="font-size: 2.5em; padding: 20px 0;">
+      <div class="container header-flex" style="font-size: 2.5em; padding: 20px 0; display: flex; align-items: center; justify-content: space-between;">
         <a href="/" style="text-decoration: none; color: inherit; cursor: pointer;">Tempest Today</a>
+        <button class="theme-toggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
+          <div class="toggle-track">
+            <span class="toggle-sun">☀️</span>
+            <span class="toggle-moon">🌙</span>
+            <div class="toggle-thumb"></div>
+          </div>
+        </button>
       </div>
     </header>
 
@@ -259,7 +252,7 @@
           </a>
         </div>
 
-        <p style="margin: 0 0 8px 0;"><a href="https://www.happylifeunfolding.com" target="_blank" rel="noopener" style="color: var(--text-secondary); text-decoration: underline; transition: color 0.2s ease;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">See what else is cooking</a></p>
+        <p style="margin: 0 0 8px 0;"><a href="https://www.happylifeunfolding.com" target="_blank" rel="noopener" style="color: var(--text-secondary); text-decoration: underline; transition: color 0.2s ease;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">See what else is brewing</a></p>
         <p style="margin: 0 0 20px 0;">&copy; 2026 Tempest Today</p>
 
     </footer>

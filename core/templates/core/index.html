@@ -49,6 +49,22 @@
       color: var(--text-primary);
     }
 
+    .clickable-card {
+      position: relative;
+    }
+
+    .clickable-card::after {
+      content: '›';
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      font-size: 1.2em;
+      color: currentColor;
+      opacity: 0.45;
+      line-height: 1;
+      pointer-events: none;
+    }
+
     .weather-icon-container {
       font-size: 3em;
       padding: 16px;
@@ -133,7 +149,15 @@
 
     .sky-section {
       min-width: 0;
-      overflow: hidden;
+    }
+
+    .row-chevron {
+      color: var(--text-secondary);
+      opacity: 0.45;
+      font-size: 1.3em;
+      flex-shrink: 0;
+      align-self: center;
+      line-height: 1;
     }
 
     .sky-divider {
@@ -329,7 +353,6 @@
 
         .sky-section {
           min-width: 0;
-          overflow: hidden;
           gap: 6px !important;
           padding: 4px 2px !important;
         }
@@ -903,7 +926,7 @@
             <div class="modal-header">
               <div style="display: flex; align-items: center; gap: 8px; flex: 1; margin-right: 12px;">
                 <button class="modal-nav-arrow" id="currentModalPrev" onclick="navigateFromCurrentModal(-1)" aria-label="Previous" disabled>‹</button>
-                <h2 style="margin: 0; font-size: 1.1em; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Current Conditions</h2>
+                <h2 style="margin: 0; font-size: 1.1em; flex: 1; text-align: center;">Now</h2>
                 <button class="modal-nav-arrow" id="currentModalNext" onclick="navigateFromCurrentModal(1)" aria-label="Next">›</button>
               </div>
               <div style="display: flex; align-items: center; gap: 10px;">
@@ -1058,9 +1081,9 @@
         <div id="forecastModal" class="modal-overlay" onclick="closeModal(event)">
           <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-              <div style="display: flex; align-items: center; gap: 8px; flex: 1; margin-right: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; margin-right: 12px;">
                 <button class="modal-nav-arrow" id="forecastModalPrev" onclick="navigateForecastModal(-1)" aria-label="Previous">‹</button>
-                <h2 id="forecastModalTitle" style="margin: 0; font-size: 1.1em; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h2>
+                <h2 id="forecastModalTitle" style="margin: 0; font-size: 1em; flex: 1; min-width: 0; text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25;"></h2>
                 <button class="modal-nav-arrow" id="forecastModalNext" onclick="navigateForecastModal(1)" aria-label="Next">›</button>
               </div>
               <div style="display: flex; align-items: center; gap: 10px;">
@@ -1145,6 +1168,7 @@
             <div class="sky-label-main">{{ current.moon_name }}</div>
             <div class="sky-label-sub">{{ current.moon_illumination }}% lit</div>
           </div>
+          <span class="row-chevron" style="margin-left:auto;">›</span>
         </div>
 
         <div class="sky-divider" style="margin: 0 8px;"></div>
@@ -1241,9 +1265,9 @@
       <div id="glanceModal" class="modal-overlay" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
           <div class="modal-header">
-            <div style="display: flex; align-items: center; gap: 8px; flex: 1; margin-right: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; margin-right: 12px;">
               <button class="modal-nav-arrow" id="glanceModalPrev" onclick="navigateGlanceModal(-1)" aria-label="Previous">‹</button>
-              <h2 id="glanceModalTitle" style="margin: 0; font-size: 1.1em; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h2>
+              <h2 id="glanceModalTitle" style="margin: 0; font-size: 1.1em; flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></h2>
               <button class="modal-nav-arrow" id="glanceModalNext" onclick="navigateGlanceModal(1)" aria-label="Next">›</button>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -1688,6 +1712,16 @@
         }
       }
 
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          closeCurrentWeatherModal();
+          closeForecastModal();
+          closeGlanceModal();
+          closeMoonModal();
+          closeAlertModal();
+        }
+      });
+
       // ── Modal navigation ────────────────────────────────────
       let currentForecastCard = null;
       let currentGlanceEl = null;
@@ -1730,6 +1764,37 @@
         const next = rows[idx + dir];
         if (next) openGlanceModal(next);
       }
+
+      // ── Swipe navigation helper ──────────────────────────────
+      function addSwipe(elementId, onSwipe) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        let startX = null, startY = null;
+
+        el.addEventListener('touchstart', function(e) {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        }, { passive: true });
+
+        el.addEventListener('touchmove', function(e) {
+          if (startX === null) return;
+          const dx = Math.abs(e.touches[0].clientX - startX);
+          const dy = Math.abs(e.touches[0].clientY - startY);
+          if (dx > dy && dx > 10) e.preventDefault();
+        }, { passive: false });
+
+        el.addEventListener('touchend', function(e) {
+          if (startX === null) return;
+          const delta = e.changedTouches[0].clientX - startX;
+          startX = null; startY = null;
+          if (Math.abs(delta) < 50) return;
+          onSwipe(delta < 0 ? 1 : -1);
+        }, { passive: true });
+      }
+
+      addSwipe('forecastModal',     (dir) => navigateForecastModal(dir));
+      addSwipe('currentWeatherModal', (dir) => { if (dir === 1) navigateFromCurrentModal(1); });
+      addSwipe('glanceModal',       (dir) => navigateGlanceModal(dir));
 
       function updateCurrentModalNavArrows() {
         // Prev is always disabled; next enabled if there are forecast cards
@@ -1878,98 +1943,94 @@
       });
 
       // Handle MODAL temperature toggle clicks (separate from main page toggle)
-      document.getElementById('currentModalUnitToggle').addEventListener('click', function() {
-        const wasC = this.classList.toggle('details-mode');
-        const newUnit = wasC ? 'C' : 'F';
-        const originalUnit = '{{ unit|default:"F" }}';
-
-        document.querySelectorAll('.modal-temp-display').forEach(tempElement => {
-          if (!tempElement.dataset.originalTemp) {
-            tempElement.dataset.originalTemp = tempElement.dataset.temp;
-            tempElement.dataset.originalUnit = originalUnit;
-          }
-          let originalTemp = parseFloat(tempElement.dataset.originalTemp);
-          if (isNaN(originalTemp)) return;
-          const origUnit = tempElement.dataset.originalUnit;
-          let displayTemp;
-          if (origUnit === 'F') {
-            displayTemp = newUnit === 'C' ? Math.round((originalTemp - 32) * 5 / 9) : Math.round(originalTemp);
-          } else {
-            displayTemp = newUnit === 'F' ? Math.round((originalTemp * 9 / 5) + 32) : Math.round(originalTemp);
-          }
-          tempElement.textContent = displayTemp + '°';
-        });
-
-        document.querySelectorAll('.modal-temp-unit').forEach(el => el.textContent = newUnit);
-      });
-
-      // Handle FORECAST MODAL temperature toggle clicks
-      document.getElementById('forecastModalUnitToggle').addEventListener('click', function() {
-        const wasC = this.classList.toggle('details-mode');
-        const newUnit = wasC ? 'C' : 'F';
-        const originalUnit = '{{ unit|default:"F" }}';
-
-        const tempElement = document.getElementById('forecastModalTemp');
-        if (!tempElement.dataset.originalTemp) {
-          tempElement.dataset.originalTemp = tempElement.dataset.temp;
-          tempElement.dataset.originalUnit = originalUnit;
-        }
-        let originalTemp = parseFloat(tempElement.dataset.originalTemp);
-        if (isNaN(originalTemp)) return;
-        const origUnit = tempElement.dataset.originalUnit;
-        let displayTemp;
-        if (origUnit === 'F') {
-          displayTemp = newUnit === 'C' ? Math.round((originalTemp - 32) * 5 / 9) : Math.round(originalTemp);
-        } else {
-          displayTemp = newUnit === 'F' ? Math.round((originalTemp * 9 / 5) + 32) : Math.round(originalTemp);
-        }
-        tempElement.textContent = displayTemp + '°';
-        document.getElementById('forecastModalTempUnit').textContent = newUnit;
-      });
-
-      // Glance modal unit toggle
-      document.getElementById('glanceModalUnitToggle').addEventListener('click', function() {
-        const wasC = this.classList.toggle('details-mode');
-        const newUnit = wasC ? 'C' : 'F';
-        [document.getElementById('glanceModalHigh'), document.getElementById('glanceModalLow')].forEach(el => {
-          const orig = parseFloat(el.dataset.originalTemp);
-          if (isNaN(orig)) return;
-          const origUnit = el.dataset.originalUnit || 'F';
-          const t = newUnit === origUnit ? orig
-            : newUnit === 'C' ? Math.round((orig - 32) * 5 / 9)
-            : Math.round((orig * 9 / 5) + 32);
-          el.textContent = t + '°';
-        });
-      });
-
-      // Handle temperature toggle
-      function toggleUnit() {
-        const btn = document.getElementById('unitToggleBtn');
-        const isC = btn.classList.toggle('details-mode');
-        const newUnit = isC ? 'C' : 'F';
+      // ── Shared unit setter: keeps main page, compact view, and
+      //    all modal toggle buttons in sync ─────────────────────
+      function setUnit(newUnit) {
+        const currentUnit = document.getElementById('unit-input').value;
+        if (currentUnit === newUnit) return;
 
         document.getElementById('unit-input').value = newUnit;
 
-        document.querySelectorAll('[data-temp]').forEach(tempElement => {
-          let temp = parseFloat(tempElement.dataset.temp);
+        // Main page toggle button
+        document.getElementById('unitToggleBtn').classList.toggle('details-mode', newUnit === 'C');
+
+        // All [data-temp] elements (main page + compact view rows)
+        document.querySelectorAll('[data-temp]').forEach(el => {
+          let temp = parseFloat(el.dataset.temp);
           if (isNaN(temp)) return;
-
-          if (newUnit === 'C') {
-            temp = Math.round((temp - 32) * 5 / 9);
-          } else {
-            temp = Math.round((temp * 9 / 5) + 32);
-          }
-
-          const unitSpan = tempElement.querySelector('.temp-unit');
+          temp = newUnit === 'C'
+            ? Math.round((temp - 32) * 5 / 9)
+            : Math.round((temp * 9 / 5) + 32);
+          const unitSpan = el.querySelector('.temp-unit');
           if (unitSpan) {
-            tempElement.innerHTML = temp + '° <span class="temp-unit">' + newUnit + '</span>';
+            el.innerHTML = temp + '° <span class="temp-unit">' + newUnit + '</span>';
           } else {
-            tempElement.textContent = temp + '° ';
+            el.textContent = temp + '° ';
           }
+          el.dataset.temp = temp;
+        });
 
-          tempElement.dataset.temp = temp;
+        // Sync all modal toggle button states
+        ['currentModalUnitToggle', 'forecastModalUnitToggle', 'glanceModalUnitToggle'].forEach(id => {
+          const btn = document.getElementById(id);
+          if (btn) btn.classList.toggle('details-mode', newUnit === 'C');
         });
       }
+
+      // Main page toggle
+      function toggleUnit() {
+        setUnit(document.getElementById('unit-input').value === 'F' ? 'C' : 'F');
+      }
+
+      // Current conditions modal toggle
+      document.getElementById('currentModalUnitToggle').addEventListener('click', function() {
+        const newUnit = document.getElementById('unit-input').value === 'F' ? 'C' : 'F';
+        setUnit(newUnit);
+        const originalUnit = '{{ unit|default:"F" }}';
+        document.querySelectorAll('.modal-temp-display').forEach(el => {
+          if (!el.dataset.originalTemp) { el.dataset.originalTemp = el.dataset.temp; el.dataset.originalUnit = originalUnit; }
+          let orig = parseFloat(el.dataset.originalTemp);
+          if (isNaN(orig)) return;
+          const ou = el.dataset.originalUnit;
+          const display = ou === 'F'
+            ? (newUnit === 'C' ? Math.round((orig - 32) * 5 / 9) : Math.round(orig))
+            : (newUnit === 'F' ? Math.round((orig * 9 / 5) + 32) : Math.round(orig));
+          el.textContent = display + '°';
+        });
+        document.querySelectorAll('.modal-temp-unit').forEach(el => el.textContent = newUnit);
+      });
+
+      // Forecast modal toggle
+      document.getElementById('forecastModalUnitToggle').addEventListener('click', function() {
+        const newUnit = document.getElementById('unit-input').value === 'F' ? 'C' : 'F';
+        setUnit(newUnit);
+        const originalUnit = '{{ unit|default:"F" }}';
+        const el = document.getElementById('forecastModalTemp');
+        if (!el.dataset.originalTemp) { el.dataset.originalTemp = el.dataset.temp; el.dataset.originalUnit = originalUnit; }
+        let orig = parseFloat(el.dataset.originalTemp);
+        if (!isNaN(orig)) {
+          const ou = el.dataset.originalUnit;
+          const display = ou === 'F'
+            ? (newUnit === 'C' ? Math.round((orig - 32) * 5 / 9) : Math.round(orig))
+            : (newUnit === 'F' ? Math.round((orig * 9 / 5) + 32) : Math.round(orig));
+          el.textContent = display + '°';
+        }
+        document.getElementById('forecastModalTempUnit').textContent = newUnit;
+      });
+
+      // Glance modal toggle
+      document.getElementById('glanceModalUnitToggle').addEventListener('click', function() {
+        const newUnit = document.getElementById('unit-input').value === 'F' ? 'C' : 'F';
+        setUnit(newUnit);
+        [document.getElementById('glanceModalHigh'), document.getElementById('glanceModalLow')].forEach(el => {
+          const orig = parseFloat(el.dataset.originalTemp);
+          if (isNaN(orig)) return;
+          const ou = el.dataset.originalUnit || 'F';
+          el.textContent = (newUnit === ou ? orig
+            : newUnit === 'C' ? Math.round((orig - 32) * 5 / 9)
+            : Math.round((orig * 9 / 5) + 32)) + '°';
+        });
+      });
     </script>
 
     <script>

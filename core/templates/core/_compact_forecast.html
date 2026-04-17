@@ -135,12 +135,26 @@
   .compact-card {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     background: var(--card-bg);
     border-radius: 10px;
     padding: 12px 14px;
     gap: 10px;
     cursor: pointer;
+  }
+
+  .row-chevron {
+    color: var(--text-secondary);
+    opacity: 0.45;
+    font-size: 1.3em;
+    flex-shrink: 0;
+    align-self: center;
+    line-height: 1;
+  }
+
+  td.row-chevron {
+    width: 24px;
+    text-align: right;
+    padding-right: 10px !important;
   }
 
   .cc-day {
@@ -241,6 +255,7 @@
        data-alert-lon="{{ lon }}">
     <span style="font-family:'Noto Color Emoji',sans-serif; font-size:1.3em; flex-shrink:0;">⚠️</span>
     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; color:var(--text-primary);">{{ alert.event }}</span>
+    <span class="row-chevron" style="margin-left:auto;">›</span>
   </div>
   {% endfor %}
 
@@ -262,6 +277,7 @@
       <th>Precip</th>
       <th>☂️/🥾</th>
       <th>Conditions</th>
+      <th></th>
     </tr>
   </thead>
   <tbody>
@@ -342,6 +358,7 @@
       <td style="color: var(--text-secondary); font-size: 0.88em;">
         {{ day.short_forecast }}
       </td>
+      <td class="row-chevron">›</td>
     </tr>
     {% empty %}
     <tr>
@@ -428,6 +445,8 @@
         {% endwith %}
        </span>
     </div>
+
+    <span class="row-chevron">›</span>
 
   </div>
   {% empty %}
