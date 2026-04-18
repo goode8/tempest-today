@@ -791,7 +791,7 @@ def build_7day_compact(forecasts):
         has_snow = entry["has_snow"]
         short_forecast_lower = (entry["short_forecast"] or "").lower()
         rain_in_text = any(w in short_forecast_lower for w in ("rain", "shower", "drizzle"))
-        umbrella = not has_snow and (rain_in_text or (precip_val is not None and precip_val >= 30))
+        umbrella = rain_in_text or (precip_val is not None and precip_val >= 30)
         inches = entry["max_precip_inches"]
         if inches is not None:
             threshold = 4.0 if has_snow else 1.0

@@ -679,6 +679,48 @@
       </a>
     </div>
 
+    {% if current.moon_emoji %}
+    <!-- Sky widget — shown alongside Details view -->
+    <div id="detailsSkyWidget" style="display: none; margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; background: var(--bg-secondary); align-items: center;">
+
+      <!-- Moon (clickable → moon modal) -->
+      <div onclick="openMoonModal()" title="Moon details" class="sky-section"
+           style="flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 8px; padding: 4px 6px; transition: background 0.15s;"
+           onmouseover="this.style.background='var(--card-bg)'" onmouseout="this.style.background='transparent'">
+        <span class="sky-emoji" style="font-family:'Noto Color Emoji',sans-serif;">{{ current.moon_emoji }}</span>
+        <div style="min-width: 0;">
+          <div class="sky-label-header">Moon</div>
+          <div class="sky-label-main">{{ current.moon_name }}</div>
+          <div class="sky-label-sub">{{ current.moon_illumination }}% lit</div>
+        </div>
+        <span class="row-chevron" style="margin-left:auto;">→</span>
+      </div>
+
+      <div class="sky-divider" style="margin: 0 8px;"></div>
+
+      <!-- Sunrise -->
+      <div class="sky-section" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 6px;">
+        <span class="sky-emoji" style="font-family:'Noto Color Emoji',sans-serif;">🌅</span>
+        <div>
+          <div class="sky-label-header">Sunrise</div>
+          <div class="sky-label-main">{{ current.sunrise }}</div>
+        </div>
+      </div>
+
+      <div class="sky-divider" style="margin: 0 8px;"></div>
+
+      <!-- Sunset -->
+      <div class="sky-section" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 6px;">
+        <span class="sky-emoji" style="font-family:'Noto Color Emoji',sans-serif;">🌇</span>
+        <div>
+          <div class="sky-label-header">Sunset</div>
+          <div class="sky-label-main">{{ current.sunset }}</div>
+        </div>
+      </div>
+
+    </div>
+    {% endif %}
+
     <div class="weather-grid" style="display:none;">
 
       {% with period=forecasts.0 %}
@@ -783,26 +825,6 @@
               </div>
           {% endif %}
 
-            {% comment %} moon {% endcomment %}
-            <div class="forecast-card clickable-card" onclick="openMoonModal()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; border: none; cursor: pointer;">
-            <h4 style="color: #ffffff; opacity: 0.9;">{{ current.moon_name }}</h4>
-
-            <div style="font-family:'Noto Color Emoji', sans-serif; font-size: 3em; margin: 10px 0;">{{ current.moon_emoji }}</div>
-            <p style="color: #ffffff; opacity: 0.85;">{{ current.moon_illumination }}% Illuminated</p>
-            <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 10px 0;"></div>
-            <br>
-            <p style="font-weight: bold; color: #ffffff;">Sunrise & Sunset</p>
-
-            <div style="display: flex; justify-content: center; margin-top: 1px; font-size: 0.85em; color: #ffffff;">
-              <span>{{ current.sunrise }}</span>
-                &nbsp;
-                &amp;
-                &nbsp;
-              <span>{{ current.sunset }}</span>
-            </div>
-          </div>
-
-
         {% for period in forecasts %}
 
           <div class="forecast-card clickable-card"
@@ -905,6 +927,14 @@
             {% else %}
               No wind
             {% endif %}
+
+            {% with sf=period.shortForecast|lower pop=period.probabilityOfPrecipitation.value %}
+            {% if pop >= 30 or "rain" in sf or "shower" in sf or "drizzle" in sf or "snow" in sf or "blizzard" in sf or "sleet" in sf or "flurr" in sf %}
+            <div style="margin-top: 8px; font-size: 1.4em; font-family: 'Noto Color Emoji', sans-serif; line-height: 1;">
+              {% if pop >= 30 or "rain" in sf or "shower" in sf or "drizzle" in sf %}☂️{% endif %}{% if "snow" in sf or "blizzard" in sf or "sleet" in sf or "flurr" in sf %}🥾{% endif %}
+            </div>
+            {% endif %}
+            {% endwith %}
 
           </div>
 
@@ -1161,11 +1191,11 @@
                 {% endif %}
                 {% if is_canada %}
                 <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
-                  Weather &amp; Air Quality Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
+                  Weather Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
                 </p>
                 {% else %}
                 <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
-                  Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a> &middot; Air quality data provided by <a href="https://www.airnow.gov/" target="_blank" style="color: inherit;">AirNow / U.S. EPA</a>
+                  Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a>
                 </p>
                 {% endif %}
               </div>
@@ -1386,12 +1416,14 @@
               </p>
               {% endif %}
               {% if is_canada %}
-              <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
-                Weather &amp; Air Quality Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a>
+              <p id="glanceModalAttribution" style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
+                <span id="glanceModalAttrFull">Weather &amp; Air Quality Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a></span>
+                <span id="glanceModalAttrWeather" style="display:none;">Weather Data &copy; <a href="https://www.canada.ca/en/environment-climate-change.html" target="_blank" style="color: inherit;">Environment and Climate Change Canada</a> &middot; <a href="https://open.canada.ca/en/open-government-licence-canada" target="_blank" style="color: inherit;">Open Government Licence</a></span>
               </p>
               {% else %}
-              <p style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
-                Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a> &middot; Air quality data provided by <a href="https://www.airnow.gov/" target="_blank" style="color: inherit;">AirNow / U.S. EPA</a>
+              <p id="glanceModalAttribution" style="font-size: 0.75em; color: var(--text-secondary); margin: 0;">
+                <span id="glanceModalAttrFull">Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a> &middot; Air quality data provided by <a href="https://www.airnow.gov/" target="_blank" style="color: inherit;">AirNow / U.S. EPA</a></span>
+                <span id="glanceModalAttrWeather" style="display:none;">Weather data provided by <a href="https://www.weather.gov/" target="_blank" style="color: inherit;">NOAA/National Weather Service</a></span>
               </p>
               {% endif %}
             </div>
@@ -1654,11 +1686,17 @@
           hintContainer.style.display = 'none';
         }
 
-        // AQI — only show for today
+        // AQI + attribution — only show for today
         const aqiContainer = document.getElementById('glanceModalAqiContainer');
+        const isToday = dateStr ? dateStr === todayISO : label.toLowerCase() === 'today';
         if (aqiContainer) {
-          const isToday = dateStr ? dateStr === todayISO : label.toLowerCase() === 'today';
           aqiContainer.style.display = isToday ? '' : 'none';
+        }
+        const attrFull    = document.getElementById('glanceModalAttrFull');
+        const attrWeather = document.getElementById('glanceModalAttrWeather');
+        if (attrFull && attrWeather) {
+          attrFull.style.display    = isToday ? '' : 'none';
+          attrWeather.style.display = isToday ? 'none' : '';
         }
 
         // Track current row and update nav arrows
@@ -1945,9 +1983,10 @@
         // Hints
         const hintContainer = document.getElementById('forecastModalHintContainer');
         const shortLower = (shortForecast || '').toLowerCase();
+        const precipNum = precip !== '' ? parseInt(precip) : 0;
         const hints = [];
-        if (shortLower.includes('rain') || shortLower.includes('shower') || shortLower.includes('drizzle')) hints.push('☂️ Pack an umbrella.');
-        if (shortLower.includes('snow') || shortLower.includes('sleet') || shortLower.includes('blizzard')) hints.push('🥾 Grab your boots.');
+        if (precipNum >= 30 || shortLower.includes('rain') || shortLower.includes('shower') || shortLower.includes('drizzle')) hints.push('☂️ Pack an umbrella.');
+        if (shortLower.includes('snow') || shortLower.includes('sleet') || shortLower.includes('blizzard') || shortLower.includes('flurr')) hints.push('🥾 Grab your boots.');
         if (hints.length) {
           document.getElementById('forecastModalHint').textContent = hints.join('  ');
           hintContainer.style.display = 'block';
@@ -2094,6 +2133,7 @@
       function toggleCompactView() {
         const container = document.getElementById('compactViewContainer');
         const skyWidget = document.getElementById('glanceSkyWidget');
+        const detailsSkyWidget = document.getElementById('detailsSkyWidget');
         const toggle = document.getElementById('viewToggleBtn');
         const weatherGrid = document.querySelector('.weather-grid');
 
@@ -2101,6 +2141,7 @@
           // Switch to Details (full forecast)
           container.style.display = 'none';
           if (skyWidget) skyWidget.style.display = 'none';
+          if (detailsSkyWidget) detailsSkyWidget.style.display = 'flex';
           weatherGrid.style.display = '';
           toggle.classList.add('details-mode');
           compactViewVisible = false;
@@ -2108,6 +2149,7 @@
           // Switch back to Glance (compact)
           container.style.display = 'block';
           if (skyWidget) skyWidget.style.display = 'flex';
+          if (detailsSkyWidget) detailsSkyWidget.style.display = 'none';
           weatherGrid.style.display = 'none';
           toggle.classList.remove('details-mode');
           compactViewVisible = true;

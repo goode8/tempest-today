@@ -17,18 +17,35 @@ _CA_PROVINCE_NAMES = frozenset({
 _CA_PROVINCE_ABBREVS = frozenset({
     'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'
 })
+_CA_MAJOR_CITIES = frozenset({
+    'winnipeg', 'winnepeg',
+    'toronto', 'vancouver', 'calgary', 'edmonton', 'ottawa', 'montreal',
+    'montréal', 'québec', 'halifax', 'saskatoon', 'regina', 'victoria',
+    'kelowna', 'abbotsford', 'surrey', 'burnaby', 'richmond', 'brampton',
+    'mississauga', 'hamilton', 'london', 'kitchener', 'waterloo', 'windsor',
+    'sudbury', 'thunder bay', 'sault ste. marie', 'barrie', 'kingston',
+    'fredericton', 'moncton', 'saint john', 'charlottetown', 'st. john\'s',
+    'whitehorse', 'yellowknife', 'iqaluit', 'lethbridge', 'red deer',
+    'medicine hat', 'fort mcmurray', 'prince george', 'kamloops', 'nanaimo',
+})
 
 
 def _is_canadian_query(address):
     """Return True if the address string likely refers to a Canadian location."""
-    lower = address.lower()
+    lower = address.lower().strip()
     if 'canada' in lower:
         return True
     for name in _CA_PROVINCE_NAMES:
         if name in lower:
             return True
     tokens = re.split(r'[\s,]+', address.strip())
-    return any(t.upper() in _CA_PROVINCE_ABBREVS for t in tokens)
+    if any(t.upper() in _CA_PROVINCE_ABBREVS for t in tokens):
+        return True
+    # Match major Canadian cities (exact or as the leading part of the query)
+    for city in _CA_MAJOR_CITIES:
+        if lower == city or lower.startswith(city + ' ') or lower.startswith(city + ','):
+            return True
+    return False
 
 
 class LocationIQResult:
