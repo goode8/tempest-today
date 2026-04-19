@@ -4,6 +4,7 @@ class ClientPlatformMiddleware:
 
     def __call__(self, request):
         ua = request.META.get("HTTP_USER_AGENT", "")
+        print(f"USER-AGENT: {ua}")
         if "TempestTodayApp/android" in ua:
             request.client_platform = "android"
         else:
