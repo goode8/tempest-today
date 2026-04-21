@@ -2385,23 +2385,28 @@
       const addressInput = document.getElementById('addressInput');
       const clearBtn = document.getElementById('clearBtn');
 
-      function updateClearBtn() {
-        clearBtn.style.display = addressInput.value ? 'flex' : 'none';
+      if (addressInput && clearBtn) {
+        function updateClearBtn() {
+          clearBtn.style.display = addressInput.value ? 'flex' : 'none';
+        }
+
+        addressInput.addEventListener('input', updateClearBtn);
+        clearBtn.addEventListener('click', function() {
+          addressInput.value = '';
+          addressInput.focus();
+          updateClearBtn();
+        });
+
+        updateClearBtn();
       }
 
-      addressInput.addEventListener('input', updateClearBtn);
-      clearBtn.addEventListener('click', function() {
-        addressInput.value = '';
-        addressInput.focus();
-        updateClearBtn();
-      });
-
-      updateClearBtn();
-
-      document.querySelector('form').addEventListener('submit', function() {
-        const btn = document.getElementById('checkWeatherBtn');
-        btn.classList.add('loading');
-      });
+      const weatherForm = document.querySelector('form');
+      if (weatherForm) {
+        weatherForm.addEventListener('submit', function() {
+          const btn = document.getElementById('checkWeatherBtn');
+          if (btn) btn.classList.add('loading');
+        });
+      }
 
       document.addEventListener('DOMContentLoaded', function() {
         const originalUnit = '{{ unit|default:"F" }}';
