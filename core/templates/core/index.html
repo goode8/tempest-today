@@ -732,7 +732,7 @@
     <p id="weather-results" style="text-align: center; color: #6b7280; font-size: 0.95em; margin: 24px 0;">
       Closest Weather Station: {{current.station_full_name}}
     </p>
-    {% if request.client_platform != "android" %}
+    {% if request.client_platform != "android" and request.client_platform != "ios" %}
     <div style="text-align: center; margin: -10px 0 20px 0;">
       <a href="#support" style="
         color: var(--text-secondary);

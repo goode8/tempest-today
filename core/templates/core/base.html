@@ -226,7 +226,7 @@
       letter-spacing: 0.01em;
     ">
 
-        {% if request.client_platform != "android" %}
+        {% if request.client_platform != "android" and request.client_platform != "ios" %}
         <div style="display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
           <a href="https://buymeacoffee.com/happylifeunfolding" target="_blank" rel="noopener" style="
             display: inline-flex; align-items: center; gap: 8px;
@@ -256,7 +256,9 @@
         </div>
         {% endif %}
 
+        {% if request.client_platform != "android" and request.client_platform != "ios" %}
         <p style="margin: 0 0 8px 0;"><a href="https://www.happylifeunfolding.com" target="_blank" rel="noopener" style="color: var(--text-secondary); text-decoration: underline; transition: color 0.2s ease;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">See what else is brewing</a></p>
+        {% endif %}
         <p style="margin: 0 0 20px 0;">&copy; 2026 Tempest Today</p>
 
     </footer>

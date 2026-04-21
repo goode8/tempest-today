@@ -6,6 +6,8 @@ class ClientPlatformMiddleware:
         ua = request.META.get("HTTP_USER_AGENT", "")
         if "TempestTodayApp/android" in ua:
             request.client_platform = "android"
+        elif "TempestTodayApp/ios" in ua:
+            request.client_platform = "ios"
         else:
             request.client_platform = "web"
         return self.get_response(request)
