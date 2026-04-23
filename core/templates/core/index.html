@@ -2145,7 +2145,8 @@
       }
 
       // Current conditions modal toggle
-      document.getElementById('currentModalUnitToggle').addEventListener('click', function() {
+      const _curToggle = document.getElementById('currentModalUnitToggle');
+      if (_curToggle) _curToggle.addEventListener('click', function() {
         const newUnit = document.getElementById('unit-input').value === 'F' ? 'C' : 'F';
         setUnit(newUnit);
         const originalUnit = '{{ unit|default:"F" }}';
@@ -2163,7 +2164,8 @@
       });
 
       // Forecast modal toggle
-      document.getElementById('forecastModalUnitToggle').addEventListener('click', function() {
+      const _fcastToggle = document.getElementById('forecastModalUnitToggle');
+      if (_fcastToggle) _fcastToggle.addEventListener('click', function() {
         const newUnit = document.getElementById('unit-input').value === 'F' ? 'C' : 'F';
         setUnit(newUnit);
         const originalUnit = '{{ unit|default:"F" }}';
@@ -2181,7 +2183,8 @@
       });
 
       // Glance modal toggle
-      document.getElementById('glanceModalUnitToggle').addEventListener('click', function() {
+      const _glanceToggle = document.getElementById('glanceModalUnitToggle');
+      if (_glanceToggle) _glanceToggle.addEventListener('click', function() {
         const newUnit = document.getElementById('unit-input').value === 'F' ? 'C' : 'F';
         setUnit(newUnit);
         [document.getElementById('glanceModalHigh'), document.getElementById('glanceModalLow')].forEach(el => {
