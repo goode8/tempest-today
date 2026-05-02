@@ -2336,6 +2336,15 @@
           const btn = document.getElementById(id);
           if (btn) btn.classList.toggle('details-mode', newUnit === 'C');
         });
+
+        // Keep URL in sync so bookmarks always capture the current unit
+        if (history.replaceState) {
+          const url = new URL(window.location.href);
+          if (url.searchParams.has('q')) {
+            url.searchParams.set('unit', newUnit);
+            history.replaceState(null, '', url.toString());
+          }
+        }
       }
 
       // Main page toggle
@@ -2446,6 +2455,19 @@
           document.getElementById('compactViewContent').innerHTML = html;
           compactViewLoaded = true;
           patchGlanceTempsFromNWS();
+          // Sync to current page unit — setUnit may have run while the fetch was in flight
+          const _pageUnit = (document.getElementById('unit-input') || {}).value || 'F';
+          if (_pageUnit !== unit) {
+            document.querySelectorAll('#compactViewContent [data-temp]').forEach(function(el) {
+              var t = parseFloat(el.dataset.temp);
+              if (isNaN(t)) return;
+              t = _pageUnit === 'F' ? Math.round((t * 9/5) + 32) : Math.round((t - 32) * 5/9);
+              var s = el.querySelector('.temp-unit');
+              if (s) el.innerHTML = t + '° <span class="temp-unit">' + _pageUnit + '</span>';
+              else el.textContent = t + '° ';
+              el.dataset.temp = t;
+            });
+          }
         })
         .catch(() => {
           document.getElementById('compactViewContent').innerHTML =
@@ -2632,9 +2654,11 @@
           // Update URL to shareable GET params (preserves state on refresh/bookmark)
           const q = '{{ address|escapejs }}';
           if (q && history.replaceState) {
+            const _existingUnit = new URLSearchParams(window.location.search).get('unit');
             const url = new URL(window.location.href);
             url.search = '';
             url.searchParams.set('q', q);
+            url.searchParams.set('unit', _existingUnit || (document.getElementById('unit-input') || {}).value || 'F');
             history.replaceState(null, '', url.toString());
           }
         }
@@ -2821,7 +2845,9 @@
           favCommitSave(slot, { q: currentQ, name: currentQ, unit, view });
           return;
         }
-        window.location.href = '/?q=' + encodeURIComponent(favs[slot].q);
+        const _fav = favs[slot];
+        const _unitParam = _fav.unit ? '&unit=' + encodeURIComponent(_fav.unit) : '';
+        window.location.href = '/?q=' + encodeURIComponent(_fav.q) + _unitParam;
       }
 
       function favSlotContext(event, slot) {
@@ -2867,7 +2893,9 @@
         favHideCtxMenu();
         const favs = favGetAll();
         if (!favs[slot]) return;
-        window.location.href = '/?q=' + encodeURIComponent(favs[slot].q);
+        const _fav = favs[slot];
+        const _unitParam = _fav.unit ? '&unit=' + encodeURIComponent(_fav.unit) : '';
+        window.location.href = '/?q=' + encodeURIComponent(_fav.q) + _unitParam;
       }
 
       function favCtxClear(slot) {
@@ -2957,6 +2985,14 @@
         favRenderBar();
         favUpdateStar();
         favSetupLongPress();
+
+        // Apply unit from URL before favorites so bookmarks work even without a saved favorite
+        const _urlUnit = new URLSearchParams(window.location.search).get('unit');
+        const _unitEl = document.getElementById('unit-input');
+        if (_urlUnit && _unitEl && (_urlUnit === 'C' || _urlUnit === 'F') && _urlUnit !== _unitEl.value) {
+          setUnit(_urlUnit);
+        }
+
         favApplySavedPrefs();
       });
     </script>
