@@ -603,6 +603,180 @@
       }
     }
 
+    /* ── Favorites Bar ── */
+    .fav-bar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 16px;
+      margin: 12px 0 12px 0;
+    }
+
+    .fav-slot {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .fav-slot-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .fav-slot-icon img {
+      display: block;
+      width: 30px;
+      height: 30px;
+      pointer-events: none;
+      user-select: none;
+      transition: transform 0.15s ease;
+    }
+
+    .fav-slot:hover .fav-slot-icon img {
+      transform: scale(1.12);
+    }
+    .fav-slot:active .fav-slot-icon img {
+      transform: scale(0.93);
+    }
+
+    .fav-slot-label {
+      font-size: 0.6em;
+      color: var(--text-secondary);
+      max-width: 68px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+      min-height: 1em;
+    }
+
+
+    /* Star button inline with location name */
+    .fav-star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.15em;
+      color: #9ca3af;
+      padding: 0 3px;
+      line-height: 1;
+      vertical-align: middle;
+      transition: color 0.2s ease, transform 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .fav-star-btn:hover { transform: scale(1.25); color: var(--text-primary); }
+    .fav-star-btn.fav-saved { color: var(--_fav-color, #9ca3af); }
+
+    @keyframes favStarPop {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.7) rotate(-12deg); }
+      65%  { transform: scale(1.25) rotate(6deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    .fav-star-btn.fav-animate { animation: favStarPop 0.38s ease forwards; }
+
+    /* Slot-picker overlay (all slots full) */
+    .fav-picker-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .fav-picker-box {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 24px 20px 20px;
+      max-width: 320px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+    }
+    .fav-picker-box h3 {
+      margin: 0 0 16px;
+      font-size: 1.05em;
+      text-align: center;
+      color: var(--text-primary);
+      font-family: 'Raleway', sans-serif;
+    }
+    .fav-picker-slots {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+    .fav-picker-slot {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 6px;
+      border-radius: 10px;
+      border: 2px solid var(--border-color);
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.12s;
+      background: var(--bg-secondary);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fav-picker-slot:hover { transform: scale(1.04); }
+    .fav-picker-slot[data-slot="1"] { border-color: #ef4444; }
+    .fav-picker-slot[data-slot="2"] { border-color: #22c55e; }
+    .fav-picker-slot[data-slot="3"] { border-color: #3b82f6; }
+    .fav-picker-slot-icon { display: flex; align-items: center; justify-content: center; }
+    .fav-picker-slot-name { font-size: 0.68em; color: var(--text-secondary); text-align: center; max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fav-picker-cancel {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.92em;
+      transition: background 0.15s;
+    }
+    .fav-picker-cancel:hover { background: var(--bg-secondary); }
+
+    /* Context menu (right-click / long-press) */
+    .fav-ctx-menu {
+      position: fixed;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 9px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+      z-index: 10001;
+      overflow: hidden;
+      min-width: 165px;
+    }
+    .fav-ctx-item {
+      display: block;
+      width: 100%;
+      padding: 12px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      cursor: pointer;
+      text-align: left;
+      font-size: 0.88em;
+      transition: background 0.1s;
+      white-space: nowrap;
+    }
+    .fav-ctx-item:hover { background: var(--bg-secondary); }
+    .fav-ctx-item.fav-ctx-danger { color: #ef4444; }
+
   </style>
 </head>
 
@@ -649,6 +823,28 @@
       </div>
 
     </form>
+
+    <!-- Favorites Bar — always visible -->
+    <div id="fav-bar" class="fav-bar" aria-label="Favorite locations">
+      <button class="fav-slot" id="fav-slot-1" data-slot="1"
+        onclick="favSlotClick(event,1)" oncontextmenu="favSlotContext(event,1)"
+        aria-label="Favorite slot 1" title="Favorite slot 1">
+        <div class="fav-slot-icon"><img id="fav-img-1" src="{% static 'images/grey.png' %}" alt="" width="30" height="30" draggable="false"></div>
+        <div class="fav-slot-label" id="fav-label-1"></div>
+      </button>
+      <button class="fav-slot" id="fav-slot-2" data-slot="2"
+        onclick="favSlotClick(event,2)" oncontextmenu="favSlotContext(event,2)"
+        aria-label="Favorite slot 2" title="Favorite slot 2">
+        <div class="fav-slot-icon"><img id="fav-img-2" src="{% static 'images/grey.png' %}" alt="" width="30" height="30" draggable="false"></div>
+        <div class="fav-slot-label" id="fav-label-2"></div>
+      </button>
+      <button class="fav-slot" id="fav-slot-3" data-slot="3"
+        onclick="favSlotClick(event,3)" oncontextmenu="favSlotContext(event,3)"
+        aria-label="Favorite slot 3" title="Favorite slot 3">
+        <div class="fav-slot-icon"><img id="fav-img-3" src="{% static 'images/grey.png' %}" alt="" width="30" height="30" draggable="false"></div>
+        <div class="fav-slot-label" id="fav-label-3"></div>
+      </button>
+    </div>
     <br />
 
     {% if error_message %}
@@ -729,8 +925,11 @@
     {% if forecasts %}
 
     {% comment %} <p3>Closest Weather Station: {{current.station_full_name}}</p3> {% endcomment %}
-    <p id="weather-results" style="text-align: center; color: #6b7280; font-size: 0.95em; margin: 24px 0;">
-      Closest Weather Station: {{current.station_full_name}}
+    <p id="weather-results" style="text-align: center; font-size: 0.95em; margin: 24px 0; line-height: 1.9;">
+      <span style="color: var(--text-primary); font-weight: 500; font-size: 1.05em;">{{ address }}</span><!--
+      --><button id="fav-star-btn" class="fav-star-btn" onclick="favStarClick()" title="Save to favorites" aria-label="Save to favorites">&#x2606;&#xFE0E;</button>
+      <br>
+      <span style="color: #6b7280; font-size: 0.88em;">Closest Station: {{current.station_full_name}}</span>
     </p>
     {% if request.client_platform != "android" and request.client_platform != "ios" %}
     <div style="text-align: center; margin: -10px 0 20px 0;">
@@ -2439,6 +2638,326 @@
             history.replaceState(null, '', url.toString());
           }
         }
+      });
+    </script>
+
+    <script>
+      // ══════════════════════════════════════════════
+      //  FAVORITES  —  3 saved location slots
+      // ══════════════════════════════════════════════
+
+      const FAV_COLORS = {
+        1: '#ef4444',
+        2: '#22c55e',
+        3: '#3b82f6'
+      };
+      const FAV_IMGS = {
+        empty: '{% static "images/grey.png" %}',
+        1: '{% static "images/red.png" %}',
+        2: '{% static "images/green.png" %}',
+        3: '{% static "images/blue.png" %}'
+      };
+
+      // ── Storage helpers ──────────────────────────
+
+      function favGetAll() {
+        const out = {};
+        for (let i = 1; i <= 3; i++) {
+          const raw = localStorage.getItem('favorite_' + i);
+          out[i] = raw ? JSON.parse(raw) : null;
+        }
+        return out;
+      }
+
+      function favWrite(slot, data) {
+        localStorage.setItem('favorite_' + slot, JSON.stringify(data));
+      }
+
+      function favErase(slot) {
+        localStorage.removeItem('favorite_' + slot);
+      }
+
+      // ── Render bar ───────────────────────────────
+
+      function favRenderBar() {
+        const favs = favGetAll();
+        for (let i = 1; i <= 3; i++) {
+          const slotEl = document.getElementById('fav-slot-' + i);
+          const labelEl = document.getElementById('fav-label-' + i);
+          const imgEl  = document.getElementById('fav-img-' + i);
+          if (!slotEl) continue;
+          if (favs[i]) {
+            slotEl.classList.add('fav-filled');
+            labelEl.textContent = favs[i].name;
+            slotEl.title = favs[i].name;
+            if (imgEl) imgEl.src = FAV_IMGS[i];
+          } else {
+            slotEl.classList.remove('fav-filled');
+            labelEl.textContent = '';
+            slotEl.title = 'Empty slot ' + i;
+            if (imgEl) imgEl.src = FAV_IMGS.empty;
+          }
+        }
+      }
+
+      // ── Star button state ────────────────────────
+
+      function favUpdateStar() {
+        const btn = document.getElementById('fav-star-btn');
+        if (!btn) return;
+        const currentQ = '{{ address|escapejs }}';
+        if (!currentQ) return;
+        const favs = favGetAll();
+        let savedSlot = null;
+        for (let i = 1; i <= 3; i++) {
+          if (favs[i] && favs[i].q === currentQ) { savedSlot = i; break; }
+        }
+        if (savedSlot) {
+          btn.innerHTML = '&#x2602;&#xFE0E;';
+          btn.style.setProperty('--_fav-color', FAV_COLORS[savedSlot]);
+          btn.style.color = FAV_COLORS[savedSlot];
+          btn.classList.add('fav-saved');
+          btn.title = 'Saved to slot ' + savedSlot + ' — tap to remove';
+        } else {
+          btn.innerHTML = '&#x2606;&#xFE0E;';
+          btn.style.color = '';
+          btn.style.removeProperty('--_fav-color');
+          btn.classList.remove('fav-saved');
+          btn.title = 'Save to favorites';
+        }
+      }
+
+      // ── Star click ───────────────────────────────
+
+      function favStarClick() {
+        const currentQ = '{{ address|escapejs }}';
+        const currentName = '{{ address|escapejs }}';
+        if (!currentQ) return;
+
+        const unit = (document.getElementById('unit-input') || {}).value || 'F';
+        const view = (typeof compactViewVisible !== 'undefined')
+          ? (compactViewVisible ? 'glance' : 'details')
+          : 'glance';
+
+        const favs = favGetAll();
+
+        // Already saved → remove it
+        for (let i = 1; i <= 3; i++) {
+          if (favs[i] && favs[i].q === currentQ) {
+            favErase(i);
+            favRenderBar();
+            favUpdateStar();
+            return;
+          }
+        }
+
+        const data = { q: currentQ, name: currentName, unit, view };
+
+        // Find first empty slot
+        let emptySlot = null;
+        for (let i = 1; i <= 3; i++) {
+          if (!favs[i]) { emptySlot = i; break; }
+        }
+
+        if (emptySlot) {
+          favCommitSave(emptySlot, data);
+        } else {
+          favShowPicker(data);
+        }
+      }
+
+      function favCommitSave(slot, data) {
+        favWrite(slot, data);
+        favRenderBar();
+        // Animate the star
+        const btn = document.getElementById('fav-star-btn');
+        if (btn) {
+          btn.innerHTML = '&#x2602;&#xFE0E;';
+          btn.style.color = FAV_COLORS[slot];
+          btn.style.setProperty('--_fav-color', FAV_COLORS[slot]);
+          btn.classList.add('fav-saved');
+          btn.classList.remove('fav-animate');
+          void btn.offsetWidth; // reflow to restart animation
+          btn.classList.add('fav-animate');
+          btn.addEventListener('animationend', () => btn.classList.remove('fav-animate'), { once: true });
+        }
+      }
+
+      // ── Slot click / long-press ──────────────────
+
+      let _favLongTimer = null;
+      let _favLongFired = false;
+
+      function favSetupLongPress() {
+        for (let i = 1; i <= 3; i++) {
+          const el = document.getElementById('fav-slot-' + i);
+          if (!el) continue;
+          (function(slot) {
+            el.addEventListener('touchstart', function(e) {
+              _favLongFired = false;
+              _favLongTimer = setTimeout(function() {
+                _favLongFired = true;
+                const t = e.touches[0];
+                favShowCtxMenu(t.clientX, t.clientY, slot);
+              }, 600);
+            }, { passive: true });
+            el.addEventListener('touchend',  () => clearTimeout(_favLongTimer), { passive: true });
+            el.addEventListener('touchmove', () => clearTimeout(_favLongTimer), { passive: true });
+          })(i);
+        }
+      }
+
+      function favSlotClick(event, slot) {
+        if (_favLongFired) { _favLongFired = false; return; }
+        const favs = favGetAll();
+        if (!favs[slot]) {
+          // Empty slot — save current location here if weather is loaded
+          const currentQ = '{{ address|escapejs }}';
+          if (!currentQ) return;
+          const unit = (document.getElementById('unit-input') || {}).value || 'F';
+          const view = (typeof compactViewVisible !== 'undefined')
+            ? (compactViewVisible ? 'glance' : 'details')
+            : 'glance';
+          favCommitSave(slot, { q: currentQ, name: currentQ, unit, view });
+          return;
+        }
+        window.location.href = '/?q=' + encodeURIComponent(favs[slot].q);
+      }
+
+      function favSlotContext(event, slot) {
+        event.preventDefault();
+        const favs = favGetAll();
+        if (!favs[slot]) return;
+        favShowCtxMenu(event.clientX, event.clientY, slot);
+      }
+
+      // ── Context menu ─────────────────────────────
+
+      function favShowCtxMenu(x, y, slot) {
+        favHideCtxMenu();
+        const favs = favGetAll();
+        if (!favs[slot]) return;
+        const menu = document.createElement('div');
+        menu.className = 'fav-ctx-menu';
+        menu.id = 'fav-ctx-menu';
+        menu.innerHTML =
+          '<button class="fav-ctx-item" onclick="favCtxGo(' + slot + ')">Go to ' + _favEsc(favs[slot].name) + '</button>' +
+          '<button class="fav-ctx-item fav-ctx-danger" onclick="favCtxClear(' + slot + ')">Clear slot ' + slot + '</button>';
+        document.body.appendChild(menu);
+
+        // Position
+        const mw = 170, mh = 84;
+        let left = Math.min(x, window.innerWidth  - mw - 8);
+        let top  = Math.min(y, window.innerHeight - mh - 8);
+        menu.style.left = Math.max(8, left) + 'px';
+        menu.style.top  = Math.max(8, top)  + 'px';
+
+        setTimeout(() => {
+          document.addEventListener('click',      favHideCtxMenu, { once: true });
+          document.addEventListener('touchstart', favHideCtxMenu, { once: true });
+        }, 50);
+      }
+
+      function favHideCtxMenu() {
+        const m = document.getElementById('fav-ctx-menu');
+        if (m) m.remove();
+      }
+
+      function favCtxGo(slot) {
+        favHideCtxMenu();
+        const favs = favGetAll();
+        if (!favs[slot]) return;
+        window.location.href = '/?q=' + encodeURIComponent(favs[slot].q);
+      }
+
+      function favCtxClear(slot) {
+        favHideCtxMenu();
+        favErase(slot);
+        favRenderBar();
+        favUpdateStar();
+      }
+
+      // ── Slot-picker (all 3 full) ─────────────────
+
+      function favShowPicker(pendingData) {
+        const favs = favGetAll();
+        const overlay = document.createElement('div');
+        overlay.className = 'fav-picker-overlay';
+        overlay.id = 'fav-picker-overlay';
+
+        const slotsHtml = [1, 2, 3].map(i =>
+          '<div class="fav-picker-slot" data-slot="' + i + '" onclick="favPickerChoose(' + i + ')">' +
+            '<div class="fav-picker-slot-icon"><img src="' + FAV_IMGS[i] + '" alt="" width="36" height="36" style="pointer-events:none;display:block;"></div>' +
+            '<div class="fav-picker-slot-name">' + _favEsc(favs[i] ? favs[i].name : '') + '</div>' +
+          '</div>'
+        ).join('');
+
+        overlay.innerHTML =
+          '<div class="fav-picker-box">' +
+            '<h3>Replace which favorite?</h3>' +
+            '<div class="fav-picker-slots">' + slotsHtml + '</div>' +
+            '<button class="fav-picker-cancel" onclick="favPickerClose()">Cancel</button>' +
+          '</div>';
+
+        // Stash pending data
+        overlay._pending = pendingData;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) favPickerClose(); });
+      }
+
+      function favPickerChoose(slot) {
+        const overlay = document.getElementById('fav-picker-overlay');
+        if (!overlay) return;
+        const data = overlay._pending;
+        favPickerClose();
+        favCommitSave(slot, data);
+      }
+
+      function favPickerClose() {
+        const el = document.getElementById('fav-picker-overlay');
+        if (el) el.remove();
+      }
+
+      // ── Apply saved prefs when landing on a favorite ──
+
+      function favApplySavedPrefs() {
+        const currentQ = '{{ address|escapejs }}';
+        if (!currentQ) return;
+        const favs = favGetAll();
+        let matched = null;
+        for (let i = 1; i <= 3; i++) {
+          if (favs[i] && favs[i].q === currentQ) { matched = favs[i]; break; }
+        }
+        if (!matched) return;
+
+        // Unit
+        const unitEl = document.getElementById('unit-input');
+        if (unitEl && matched.unit && matched.unit !== unitEl.value && typeof setUnit === 'function') {
+          setUnit(matched.unit);
+        }
+        // View
+        if (matched.view === 'details' && typeof compactViewVisible !== 'undefined' && compactViewVisible) {
+          if (typeof toggleCompactView === 'function') toggleCompactView();
+        }
+      }
+
+      // ── Utility ──────────────────────────────────
+
+      function _favEsc(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      // ── Init ─────────────────────────────────────
+
+      document.addEventListener('DOMContentLoaded', function() {
+        favRenderBar();
+        favUpdateStar();
+        favSetupLongPress();
+        favApplySavedPrefs();
       });
     </script>
 
