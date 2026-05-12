@@ -13,6 +13,7 @@ from .utils import (
 )
 from datetime import datetime
 from collections import defaultdict
+import re
 import pytz
 import concurrent.futures
 
@@ -89,6 +90,14 @@ _REGION_CAPITALS = {
     "wyoming": "Cheyenne, WY",
 }
 
+def _normalize_query(q):
+    q = q.lower().strip()
+    q = re.sub(r'[.,;:]+\s*', ' ', q)  # normalize punctuation separators to space
+    q = re.sub(r'\s+', ' ', q)
+    q = q.strip()
+    return q
+
+
 def _resolve_region_to_capital(address):
     """
     If `address` is just a province or state name, return the capital city
@@ -108,12 +117,12 @@ def index(request):
 
     # Support both GET (?q=...&unit=F) and POST (form submission)
     if request.method == "GET":
-        address = request.GET.get("q", "").strip()
+        address = _normalize_query(request.GET.get("q", ""))
         unit = "F"
         if not address:
             return render(request, "core/index.html", {"unit": unit})
     else:
-        address = request.POST.get("address", "").strip()
+        address = _normalize_query(request.POST.get("address", ""))
         unit = request.POST.get("unit", "F")
 
     weather_service = WeatherService()
@@ -824,7 +833,7 @@ def compact_forecast(request):
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
 
-    address = request.POST.get("address", "").strip()
+    address = _normalize_query(request.POST.get("address", ""))
     unit = request.POST.get("unit", "F")
 
     def render_error(msg):

@@ -4,6 +4,7 @@ Weather service module - handles all external API calls and data processing
 import requests
 import os
 import re
+from django.core.cache import cache
 from geopy.geocoders import Nominatim, Photon
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
@@ -30,10 +31,19 @@ _CA_MAJOR_CITIES = frozenset({
 })
 
 
+_CA_POSTAL_RE = re.compile(
+    r'^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTVWXYZ][\s-]?\d[ABCEGHJ-NPRSTVWXYZ]\d$',
+    re.IGNORECASE
+)
+
+
 def _is_canadian_query(address):
     """Return True if the address string likely refers to a Canadian location."""
     lower = address.lower().strip()
     if 'canada' in lower:
+        return True
+    # Canadian postal code format: A1A 1A1 or A1A1A1
+    if _CA_POSTAL_RE.match(address.strip()):
         return True
     for name in _CA_PROVINCE_NAMES:
         if name in lower:
@@ -147,12 +157,14 @@ class WeatherService:
                     query={'postalcode': address.strip(), 'country': 'us'},
                     timeout=timeout, exactly_one=True, addressdetails=True
                 )
-                if not location:
-                    location = nom.geocode(
-                        f"{address}, United States",
-                        timeout=timeout, exactly_one=True,
-                        addressdetails=True, country_codes='us'
-                    )
+                # Validate the result is actually in the US — Nominatim can
+                # return a plausible-looking but wrong match (e.g. DC) when
+                # the ZIP doesn't exist.
+                if location:
+                    cc = (location.raw or {}).get('address', {}).get('country_code', '').upper()
+                    if cc != 'US':
+                        print(f"✗ Nominatim returned non-US result for ZIP {address} ({cc}), discarding")
+                        location = None
             elif is_canadian:
                 location = nom.geocode(
                     f"{address}, Canada",
@@ -331,7 +343,7 @@ class WeatherService:
             return (c[1] - lat) ** 2 + (c[0] - lon) ** 2
 
         feature = min(features, key=_dist)
-        city_name = feature.get('properties', {}).get('displayName', {}).get('en', 'Unknown')
+        city_name = feature.get('properties', {}).get('name', {}).get('en', 'Unknown')
         print(f"✓ ECCC nearest city: {city_name}")
         return self._parse_eccc_json(feature.get('properties', {}))
 
@@ -506,6 +518,7 @@ class WeatherService:
         api_key = os.getenv('AIRNOW_API_KEY')
         if not api_key:
             return None
+        cache_key = f"airnow_{round(lat, 2)}_{round(lon, 2)}"
         try:
             url = "https://www.airnowapi.org/aq/observation/latLong/current/"
             params = {
@@ -532,26 +545,31 @@ class WeatherService:
                 6: '#4a0072',  # Hazardous
             }
             cat_num = best.get('Category', {}).get('Number', 1)
-            return {
+            result = {
                 'label': 'AQI',
                 'value': aqi_value,
                 'category': best.get('Category', {}).get('Name', ''),
                 'pollutant': best.get('ParameterName', ''),
                 'color': aqi_color_map.get(cat_num, '#00c853'),
             }
+            cache.set(cache_key, result, 3600)  # cache for 1 hour
+            return result
         except Exception as e:
             print(f"AirNow API error: {e}")
-            return None
+            cached = cache.get(cache_key)
+            if cached:
+                print(f"AirNow: returning cached AQI for {lat},{lon}")
+            return cached
 
     def _get_aqhi(self, lat, lon):
         """Fetch Canadian AQHI from ECCC MSC GeoMet. Returns dict or None."""
         delta = 1.0
         bbox = f"{lon - delta},{lat - delta},{lon + delta},{lat + delta}"
         try:
-            url = "https://api.weather.gc.ca/collections/aqhi-forecasts-realtime/items"
+            url = "https://api.weather.gc.ca/collections/aqhi-observations-realtime/items"
             resp = requests.get(
                 url,
-                params={'f': 'json', 'limit': 10, 'bbox': bbox},
+                params={'f': 'json', 'limit': 10, 'bbox': bbox, 'latest': 'true'},
                 headers=self.headers,
                 timeout=10,
             )
@@ -566,12 +584,7 @@ class WeatherService:
                 return (c[1] - lat) ** 2 + (c[0] - lon) ** 2
             feature = min(features, key=_dist)
             props = feature.get('properties', {})
-            # Try common field names for AQHI value
-            aqhi_value = (
-                props.get('aqhi')
-                or props.get('airQualityHealthIndex')
-                or props.get('aqhiValue')
-            )
+            aqhi_value = props.get('aqhi')
             if aqhi_value is None:
                 return None
             try:
