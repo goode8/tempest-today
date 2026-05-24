@@ -95,6 +95,40 @@ class WeatherService:
         # Detect Canadian queries (province names/abbreviations or "canada")
         is_canadian = not is_zip and _is_canadian_query(address)
 
+        # Normalize Canadian postal codes to standard format: "b1p7c1" -> "B1P 7C1"
+        if is_canadian and _CA_POSTAL_RE.match(address.strip()):
+            raw = re.sub(r'[\s-]', '', address.strip()).upper()
+            address = f"{raw[:3]} {raw[3:]}"
+
+        # === CANADIAN POSTAL CODE: geocoder.ca (most reliable for CA postal codes) ===
+        if is_canadian and _CA_POSTAL_RE.match(address.strip()):
+            try:
+                compact = address.replace(' ', '')
+                resp = requests.get(
+                    'https://geocoder.ca/',
+                    params={'postal': compact, 'json': 1},
+                    timeout=timeout,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    lat = float(data.get('latt', 0) or 0)
+                    lon = float(data.get('longt', 0) or 0)
+                    if lat and lon:
+                        std = data.get('standard', {})
+                        city = std.get('city', '')
+                        prov = std.get('prov', '')
+                        address_parts = {
+                            'country_code': 'CA',
+                            'state': prov,
+                            'city': city,
+                            'country': 'Canada',
+                        }
+                        location = LocationIQResult(lat, lon, f"{city}, {prov}, Canada", address_parts)
+                        print(f"✓ geocoder.ca (CA): {address} -> {lat}, {lon} ({city}, {prov})")
+                        return lat, lon, location
+            except Exception as e:
+                print(f"geocoder.ca error: {e}")
+
         # === PRIMARY: Try LocationIQ first (if API key available) ===
         if self.locationiq_api_key:
             try:
@@ -166,11 +200,17 @@ class WeatherService:
                         print(f"✗ Nominatim returned non-US result for ZIP {address} ({cc}), discarding")
                         location = None
             elif is_canadian:
-                location = nom.geocode(
-                    f"{address}, Canada",
-                    timeout=timeout, exactly_one=True,
-                    addressdetails=True, country_codes='ca'
-                )
+                if _CA_POSTAL_RE.match(address.strip()):
+                    location = nom.geocode(
+                        query={'postalcode': address.strip(), 'country': 'ca'},
+                        timeout=timeout, exactly_one=True, addressdetails=True
+                    )
+                else:
+                    location = nom.geocode(
+                        f"{address}, Canada",
+                        timeout=timeout, exactly_one=True,
+                        addressdetails=True, country_codes='ca'
+                    )
             else:
                 parts = re.split(r'[,\s]+', address.strip())
                 us_state_abbrevs = {
