@@ -31,6 +31,40 @@ _CA_MAJOR_CITIES = frozenset({
 })
 
 
+# WeatherAPI free tier: 1 000 000 calls/month.  We budget 1/31 of that per day
+# so a single busy day can't silently exhaust the monthly allowance.
+_UV_DAILY_LIMIT = 1_000_000 // 31  # ≈ 32 258
+
+
+def uv_quota_allowed():
+    """
+    Check and increment the daily WeatherAPI UV call counter.
+
+    Returns True if the call is within today's budget, False if the limit has
+    been reached.  The counter resets automatically each UTC day via cache TTL.
+
+    Note: Django's default local-memory cache is per-process.  If you run
+    multiple workers, each worker tracks its own counter; effective combined
+    limit will be higher.  Switch to a shared cache backend (database or Redis)
+    to enforce the limit across all workers.
+    """
+    from django.utils import timezone
+    today = timezone.now().strftime('%Y-%m-%d')
+    key = f'uv_daily_calls_{today}'
+
+    if (cache.get(key) or 0) >= _UV_DAILY_LIMIT:
+        return False
+
+    try:
+        cache.incr(key)
+    except ValueError:
+        # Key doesn't exist yet — initialise it with a 25 h TTL so it
+        # definitely outlives the calendar day before auto-expiring.
+        cache.set(key, 1, 90_000)
+
+    return True
+
+
 _CA_POSTAL_RE = re.compile(
     r'^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTVWXYZ][\s-]?\d[ABCEGHJ-NPRSTVWXYZ]\d$',
     re.IGNORECASE
@@ -65,6 +99,21 @@ class LocationIQResult:
         self.longitude = lon
         self.address = display_name
         self.raw = {'address': address_data}
+
+
+def _uv_label(v):
+    if v <= 2:  return 'Low'
+    if v <= 5:  return 'Moderate'
+    if v <= 7:  return 'High'
+    if v <= 10: return 'Very High'
+    return 'Extreme'
+
+def _uv_color(v):
+    if v <= 2:  return '#3ea72d'
+    if v <= 5:  return '#c8a000'
+    if v <= 7:  return '#f18b00'
+    if v <= 10: return '#e53210'
+    return '#b567a4'
 
 
 class WeatherService:
@@ -540,6 +589,72 @@ class WeatherService:
         return forecasts, current_weather, active_alerts
 
     # ── Air Quality ────────────────────────────────────────────────────────────
+
+    def get_uv_index(self, lat, lon):
+        """
+        Fetch UV index data from WeatherAPI for the given coordinates.
+        Returns a dict with current UV, label, color, peak, peak_time, hourly list,
+        now_idx, sunrise_hour, and sunset_hour — or None if unavailable.
+        """
+        cache_key = f'uv_{round(lat, 2)}_{round(lon, 2)}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        if not uv_quota_allowed():
+            return None
+
+        api_key = os.getenv('WEATHERAPI_KEY')
+        if not api_key:
+            return None
+
+        try:
+            resp = requests.get(
+                'https://api.weatherapi.com/v1/forecast.json',
+                params={'key': api_key, 'q': f'{lat},{lon}', 'days': 1},
+                timeout=8,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            current_uv = data['current']['uv']
+
+            hourly_list = []
+            for entry in data['forecast']['forecastday'][0]['hour']:
+                # time format: "2026-05-29 14:00"
+                time_str = entry['time']
+                hour_int = int(time_str.split(' ')[1].split(':')[0])
+                if hour_int == 0:
+                    label = '12 am'
+                elif hour_int < 12:
+                    label = f'{hour_int} am'
+                elif hour_int == 12:
+                    label = '12 pm'
+                else:
+                    label = f'{hour_int - 12} pm'
+                hourly_list.append({
+                    'time': label,
+                    'uv': float(entry['uv']),
+                    'hour_int': hour_int,
+                })
+
+            peak_entry = max(hourly_list, key=lambda h: h['uv'])
+            peak_uv = peak_entry['uv']
+            peak_time_label = peak_entry['time']
+
+            result = {
+                'current': current_uv,
+                'label': _uv_label(current_uv),
+                'color': _uv_color(current_uv),
+                'peak': peak_uv,
+                'peak_time': peak_time_label,
+                'hourly': hourly_list,
+            }
+            cache.set(cache_key, result, 3600)
+            return result
+        except Exception as e:
+            print(f'WeatherAPI UV error: {e}')
+            return None
 
     def get_air_quality(self, lat, lon, is_canada):
         """

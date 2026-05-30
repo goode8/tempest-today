@@ -14,6 +14,7 @@ from .utils import (
 from datetime import datetime
 from collections import defaultdict
 import re
+import json
 import pytz
 import concurrent.futures
 
@@ -293,6 +294,7 @@ def index(request):
                 "lat": lat,
                 "lon": lon,
                 "is_canada": cached_is_canada,
+                "uv_hourly_json": json.dumps(current_weather['uv']['hourly']) if current_weather.get('uv') else 'null',
             }
         )
 
@@ -301,13 +303,15 @@ def index(request):
 
     if is_canada:
         # Fetch from ECCC MSC Datamart + astronomy + AQHI in parallel
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             eccc_future = executor.submit(weather_service.get_eccc_weather, lat, lon)
             astronomy_future = executor.submit(get_astronomy_data, lat, lon)
             air_quality_future = executor.submit(weather_service.get_air_quality, lat, lon, True)
+            uv_future = executor.submit(weather_service.get_uv_index, lat, lon)
             eccc_result = eccc_future.result()
             astronomy = astronomy_future.result()
             air_quality = air_quality_future.result()
+            uv_data = uv_future.result()
 
         if eccc_result is None or eccc_result == (None, None, None):
             return render(request, "core/index.html", {
@@ -352,6 +356,18 @@ def index(request):
         except Exception:
             current_weather['is_night'] = False
 
+        if uv_data:
+            try:
+                local_tz = pytz.timezone(astronomy.get('timezone', 'UTC'))
+                now_local = datetime.now(local_tz)
+                uv_data['now_idx'] = next(
+                    (i for i, h in enumerate(uv_data['hourly']) if h['hour_int'] == now_local.hour),
+                    12
+                )
+            except Exception:
+                uv_data['now_idx'] = 12
+        current_weather['uv'] = uv_data
+
         current_weather['active_alerts'] = eccc_alerts
         current_weather['detailed_forecast'] = forecasts[0].get('detailedForecast', '') if forecasts else ''
 
@@ -362,6 +378,7 @@ def index(request):
             'active_alerts': eccc_alerts,
             'state_abbrev': None,
             'is_canada': True,
+            'uv': uv_data,
         }, 600)
 
         return render(
@@ -377,6 +394,7 @@ def index(request):
                 "lat": lat,
                 "lon": lon,
                 "is_canada": True,
+                "uv_hourly_json": json.dumps(current_weather['uv']['hourly']) if current_weather.get('uv') else 'null',
             }
         )
 
@@ -400,12 +418,13 @@ def index(request):
             state_abbrev = address_components.get('state')
 
     # Step 3-6: Make API calls in parallel for faster loading
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
         # Submit all API calls at once
         forecast_future = executor.submit(weather_service.get_forecast, metadata["forecast"])
         alerts_future = executor.submit(weather_service.get_active_alerts, lat, lon)
         astronomy_future = executor.submit(get_astronomy_data, lat, lon)
         air_quality_future = executor.submit(weather_service.get_air_quality, lat, lon, False)
+        uv_future = executor.submit(weather_service.get_uv_index, lat, lon)
 
         # Also get current weather in parallel (which internally calls get_nearest_station and get_current_observations)
         # Always fetch in Fahrenheit so cache stores consistent F data
@@ -416,6 +435,7 @@ def index(request):
         active_alerts = alerts_future.result()
         astronomy = astronomy_future.result()
         air_quality = air_quality_future.result()
+        uv_data = uv_future.result()
         current_weather = current_weather_future.result()
 
     current_weather['air_quality'] = air_quality
@@ -431,6 +451,18 @@ def index(request):
         current_weather['is_night'] = is_night
     except:
         current_weather['is_night'] = False
+
+    if uv_data:
+        try:
+            local_tz = pytz.timezone(astronomy.get('timezone', 'UTC'))
+            now_local = datetime.now(local_tz)
+            uv_data['now_idx'] = next(
+                (i for i, h in enumerate(uv_data['hourly']) if h['hour_int'] == now_local.hour),
+                12
+            )
+        except Exception:
+            uv_data['now_idx'] = 12
+    current_weather['uv'] = uv_data
 
     # Step 5c: Create moon visibility message based on position and weather
     # moon_visible = current_weather.get('moon_visible', False)
@@ -467,6 +499,7 @@ def index(request):
         'active_alerts': active_alerts,
         'state_abbrev': state_abbrev,
         'is_canada': False,
+        'uv': uv_data,
     }
     cache.set(cache_key, cache_data, 600)  # 10 minutes
 
@@ -502,6 +535,7 @@ def index(request):
             "lat": lat,
             "lon": lon,
             "is_canada": False,
+            "uv_hourly_json": json.dumps(current_weather['uv']['hourly']) if current_weather.get('uv') else 'null',
         }
     )
 

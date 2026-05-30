@@ -142,9 +142,10 @@
     }
 
     .toggle-group {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(2, auto);
       gap: 8px;
-      align-items: center;
+      justify-content: center;
     }
 
     .sky-section {
@@ -357,8 +358,7 @@
         }
 
         .toggle-group {
-          flex-direction: row !important;
-          flex-wrap: nowrap;
+          grid-template-columns: repeat(2, auto);
           justify-content: center;
         }
 
@@ -408,25 +408,36 @@
           transform: translateX(42px);
         }
 
-        /* Sky widget: compact layout on narrow screens */
-        #glanceSkyWidget {
-          padding: 8px 10px;
+        /* Sky widget: 2×2 grid on narrow screens */
+        #glanceSkyWidget,
+        #detailsSkyWidget {
+          flex-wrap: wrap;
+          gap: 2px 0;
+          padding: 8px 10px !important;
         }
 
-        .sky-section {
+        #glanceSkyWidget .sky-section,
+        #detailsSkyWidget .sky-section {
+          flex: 0 0 50% !important;
           min-width: 0;
-          gap: 6px !important;
-          padding: 4px 2px !important;
+          gap: 8px !important;
+          padding: 6px 4px !important;
+          justify-content: flex-start !important;
+        }
+
+        #glanceSkyWidget .sky-divider,
+        #detailsSkyWidget .sky-divider {
+          display: none;
         }
 
         .sky-emoji {
           font-size: 18px !important;
         }
 
-        .sky-divider {
-          margin: 0 4px !important;
-          height: auto !important;
-          align-self: stretch;
+        .sky-aqi-badge {
+          width: 28px !important;
+          height: 28px !important;
+          font-size: 0.65em !important;
         }
       }
 
@@ -777,6 +788,21 @@
     .fav-ctx-item:hover { background: var(--bg-secondary); }
     .fav-ctx-item.fav-ctx-danger { color: #ef4444; }
 
+    /* UV Index card */
+    .sky-aqi-badge {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75em; font-weight: 700; color: #fff; flex-shrink: 0;
+      line-height: 1;
+    }
+    .uv-card { border:1px solid var(--border-color); border-radius:14px; background:var(--card-bg); overflow:hidden; margin-top:8px; }
+    .uv-lbl { font-size:0.7em; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); }
+    #uvHillLine { stroke-dasharray:3000; stroke-dashoffset:3000; transition:stroke-dashoffset 1.9s cubic-bezier(0.4,0,0.2,1); }
+    .uv-fzone { opacity:0; transition:opacity 0.9s ease 0.35s; }
+    #uvNowRing { transform-box:fill-box; transform-origin:center; animation:uvRipple 2.2s ease-out infinite; }
+    @keyframes uvRipple { 0%{r:5;opacity:0.7} 100%{r:16;opacity:0} }
+    .uv-chip { display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1px solid var(--border-color);font-size:0.78em;color:var(--text-secondary);margin:3px 3px 3px 0; }
+
   </style>
 </head>
 
@@ -816,9 +842,18 @@
           <div class="view-toggle-track">
             <div class="view-toggle-thumb"></div>
             <span class="view-label">Off</span>
-            <span class="view-label">🗺️</span>
+            <span class="view-label">Radar</span>
           </div>
         </button>
+        {% if current.uv %}
+        <button type="button" id="uvToggleBtn" onclick="toggleUV()" class="view-toggle" aria-label="Toggle UV index">
+          <div class="view-toggle-track">
+            <div class="view-toggle-thumb"></div>
+            <span class="view-label">Off</span>
+            <span class="view-label">UV Index</span>
+          </div>
+        </button>
+        {% endif %}
         {% endif %}
       </div>
 
@@ -951,6 +986,19 @@
     {% if current.moon_emoji %}
     <!-- Sky widget — shown alongside Details view -->
     <div id="detailsSkyWidget" style="display: none; margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; background: var(--bg-secondary); align-items: center;">
+
+      {% if current.air_quality %}
+      <!-- AQI -->
+      <div class="sky-section" style="flex: 1; display: flex; align-items: center; gap: 10px; padding: 4px 6px;">
+        <span class="sky-aqi-badge" style="background: {{ current.air_quality.color }};">{{ current.air_quality.value }}</span>
+        <div style="min-width: 0;">
+          <div class="sky-label-header">{{ current.air_quality.label }}</div>
+          <div class="sky-label-main">{{ current.air_quality.category }}</div>
+          {% if current.air_quality.pollutant %}<div class="sky-label-sub">{{ current.air_quality.pollutant }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="sky-divider" style="margin: 0 8px;"></div>
+      {% endif %}
 
       <!-- Moon (clickable → moon modal) -->
       <div onclick="openMoonModal()" title="Moon details" class="sky-section"
@@ -1479,6 +1527,19 @@
       <!-- Sky widget — shown alongside Glance view -->
       <div id="glanceSkyWidget" style="margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px; background: var(--bg-secondary); display: flex; align-items: center;">
 
+        {% if current.air_quality %}
+        <!-- AQI -->
+        <div class="sky-section" style="flex: 1; display: flex; align-items: center; gap: 10px; padding: 4px 6px;">
+          <span class="sky-aqi-badge" style="background: {{ current.air_quality.color }};">{{ current.air_quality.value }}</span>
+          <div style="min-width: 0;">
+            <div class="sky-label-header">{{ current.air_quality.label }}</div>
+            <div class="sky-label-main">{{ current.air_quality.category }}</div>
+            {% if current.air_quality.pollutant %}<div class="sky-label-sub">{{ current.air_quality.pollutant }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="sky-divider" style="margin: 0 8px;"></div>
+        {% endif %}
+
         <!-- Moon (clickable → moon modal) -->
         <div onclick="openMoonModal()" title="Moon details" class="sky-section"
              style="flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 8px; padding: 4px 6px; transition: background 0.15s;"
@@ -1517,6 +1578,237 @@
       </div>
       {% endif %}
 
+      <!-- Radar map container — hidden by default -->
+      <div id="radarContainer" style="display:none; margin-top:8px; border:1px solid var(--border-color); border-radius:12px; overflow:hidden;">
+        <div style="padding:8px 12px; background:var(--bg-secondary);">
+          <span style="font-size:0.8em; color:var(--text-secondary);">Live radar · updated every few minutes{% if is_canada %} · MSC GeoMet / Environment Canada{% endif %}</span>
+        </div>
+        <div id="radarMap" style="height:420px;"></div>
+        <div style="padding:6px 12px; background:var(--bg-secondary); border-top:1px solid var(--border-color);">
+          <span style="font-size:0.75em; color:var(--text-secondary); font-style:italic;">{% if is_canada %}Showing Canadian radar. For US coverage, search a US city.{% else %}Showing US radar. For Canadian coverage, search a Canadian city.{% endif %}</span>
+        </div>
+      </div>
+
+      {% if current.uv %}
+      <div class="uv-card" style="display:none;">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px 10px;">
+          <span class="uv-lbl">UV Index</span>
+          <span style="font-size:0.88em;color:var(--text-secondary);">Today &middot; {{ address }}</span>
+        </div>
+
+        <svg id="uvChart" viewBox="0 0 700 190" width="100%" style="display:block;">
+          <defs>
+            <linearGradient id="uvDawnG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#c5cff0"/><stop offset="100%" stop-color="rgba(197,207,240,0)"/>
+            </linearGradient>
+            <linearGradient id="uvDuskG" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="rgba(197,207,240,0)"/><stop offset="100%" stop-color="#c5cff0"/>
+            </linearGradient>
+            <clipPath id="uvCpGreen" ><rect id="uvCrGreen"  x="0" width="700"/></clipPath>
+            <clipPath id="uvCpYellow"><rect id="uvCrYellow" x="0" width="700"/></clipPath>
+            <clipPath id="uvCpOrange"><rect id="uvCrOrange" x="0" width="700"/></clipPath>
+            <clipPath id="uvCpRed"   ><rect id="uvCrRed"    x="0" width="700"/></clipPath>
+          </defs>
+          <rect x="0" y="0" width="700" height="165" fill="var(--card-bg)"/>
+          <rect id="uvNightL" x="0" y="0" height="165" fill="#c5cff0"/>
+          <rect id="uvNightR"      y="0" height="165" fill="#c5cff0"/>
+          <rect id="uvDawn"   y="0" height="165"/>
+          <rect id="uvDusk"   y="0" height="165"/>
+          <line id="uvGridLow"  x1="0" x2="700" stroke="var(--border-color)" stroke-width="0.8" stroke-dasharray="5 4"/>
+          <line id="uvGridMod"  x1="0" x2="700" stroke="var(--border-color)" stroke-width="0.8" stroke-dasharray="5 4"/>
+          <line id="uvGridHigh" x1="0" x2="700" stroke="var(--border-color)" stroke-width="0.8" stroke-dasharray="5 4"/>
+          <path id="uvFGreen"  class="uv-fzone" fill="rgba(60,180,60,0.28)"  clip-path="url(#uvCpGreen)"/>
+          <path id="uvFYellow" class="uv-fzone" fill="rgba(255,195,0,0.35)"  clip-path="url(#uvCpYellow)"/>
+          <path id="uvFOrange" class="uv-fzone" fill="rgba(240,120,0,0.42)"  clip-path="url(#uvCpOrange)"/>
+          <path id="uvFRed"    class="uv-fzone" fill="rgba(215,50,30,0.42)"  clip-path="url(#uvCpRed)"/>
+          <path id="uvHillLine" fill="none" stroke="var(--text-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line id="uvNowLine" stroke="#4a9ff5" stroke-width="1.5"/>
+          <circle id="uvNowRing" fill="none" stroke="#4a9ff5" stroke-width="1.5"/>
+          <circle id="uvNowDot" r="4.5" fill="none" stroke="#4a9ff5" stroke-width="2"/>
+          <g id="uvAxis" fill="var(--text-secondary)" font-size="11" font-family="-apple-system,sans-serif" text-anchor="middle"/>
+          <g id="uvYAxis" font-size="10" font-weight="600" font-family="-apple-system,sans-serif" text-anchor="start" stroke="var(--card-bg)" stroke-width="3" paint-order="stroke"/>
+        </svg>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px 16px;">
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <span style="font-size:3.2em;font-weight:700;line-height:1;color:{{ current.uv.color }};">{{ current.uv.current|floatformat:0 }}</span>
+            <span style="font-size:1em;color:var(--text-secondary);">/ 11</span>
+            <div style="margin-left:4px;">
+              <div style="font-size:0.9em;font-weight:600;color:{{ current.uv.color }};">{{ current.uv.label }}</div>
+              <div style="font-size:0.72em;color:var(--text-secondary);">now</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div class="uv-lbl">Peak today</div>
+            <div style="font-size:1.6em;font-weight:700;line-height:1.1;color:#e53210;">{{ current.uv.peak|floatformat:0 }}</div>
+            <div style="font-size:0.72em;color:var(--text-secondary);">{{ current.uv.peak_time }}</div>
+          </div>
+        </div>
+
+        <!-- Protection guide -->
+        <div style="padding:0 20px 16px;">
+          <div class="uv-lbl" style="margin-bottom:10px;">Sun Protection Guide</div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.82em;">
+            <thead>
+              <tr style="color:var(--text-secondary);font-size:0.9em;">
+                <th style="text-align:left;padding:0 8px 6px 0;font-weight:500;">Zone</th>
+                <th style="text-align:center;padding:0 8px 6px;font-weight:500;">Sunscreen</th>
+                <th style="text-align:center;padding:0 8px 6px;font-weight:500;">Hat only?</th>
+                <th style="text-align:left;padding:0 0 6px 8px;font-weight:500;">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% with uv=current.uv.current %}
+              <tr style="{% if uv <= 2 %}background:rgba(62,167,45,0.08);{% endif %}">
+                <td style="padding:6px 8px 6px 0;border-top:1px solid var(--border-color);"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#3ea72d;display:inline-block;"></span><span style="{% if uv <= 2 %}font-weight:700;color:#3ea72d;{% endif %}">0–2</span></span></td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">None needed</td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">✅ Yes</td>
+                <td style="padding:6px 0 6px 8px;border-top:1px solid var(--border-color);color:var(--text-secondary);">No real risk. Sunglasses on bright days.{% if uv <= 2 %} <strong style="color:#3ea72d;">← now</strong>{% endif %}</td>
+              </tr>
+              <tr style="{% if uv >= 3 and uv <= 5 %}background:rgba(200,160,0,0.08);{% endif %}">
+                <td style="padding:6px 8px 6px 0;border-top:1px solid var(--border-color);"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#c8a000;display:inline-block;"></span><span style="{% if uv >= 3 and uv <= 5 %}font-weight:700;color:#c8a000;{% endif %}">3–5</span></span></td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">SPF 15+</td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">⚠️ Short trips</td>
+                <td style="padding:6px 0 6px 8px;border-top:1px solid var(--border-color);color:var(--text-secondary);">Hat fine for &lt;20 min. Add SPF 15+ if out longer.{% if uv >= 3 and uv <= 5 %} <strong style="color:#c8a000;">← now</strong>{% endif %}</td>
+              </tr>
+              <tr style="{% if uv >= 6 and uv <= 7 %}background:rgba(241,139,0,0.08);{% endif %}">
+                <td style="padding:6px 8px 6px 0;border-top:1px solid var(--border-color);"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#f18b00;display:inline-block;"></span><span style="{% if uv >= 6 and uv <= 7 %}font-weight:700;color:#f18b00;{% endif %}">6–7</span></span></td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">SPF 30+</td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">❌ No</td>
+                <td style="padding:6px 0 6px 8px;border-top:1px solid var(--border-color);color:var(--text-secondary);">Essential. Apply 15 min before, reapply every 2 hrs. Shade 10am–4pm.{% if uv >= 6 and uv <= 7 %} <strong style="color:#f18b00;">← now</strong>{% endif %}</td>
+              </tr>
+              <tr style="{% if uv >= 8 and uv <= 10 %}background:rgba(229,50,16,0.08);{% endif %}">
+                <td style="padding:6px 8px 6px 0;border-top:1px solid var(--border-color);"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#e53210;display:inline-block;"></span><span style="{% if uv >= 8 and uv <= 10 %}font-weight:700;color:#e53210;{% endif %}">8–10</span></span></td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">SPF 50+</td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">❌ No</td>
+                <td style="padding:6px 0 6px 8px;border-top:1px solid var(--border-color);color:var(--text-secondary);">Cover exposed skin. SPF 50+ + hat + shirt. Minimize 10am–4pm.{% if uv >= 8 and uv <= 10 %} <strong style="color:#e53210;">← now</strong>{% endif %}</td>
+              </tr>
+              <tr style="{% if uv >= 11 %}background:rgba(181,103,164,0.08);{% endif %}">
+                <td style="padding:6px 8px 6px 0;border-top:1px solid var(--border-color);"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#b567a4;display:inline-block;"></span><span style="{% if uv >= 11 %}font-weight:700;color:#b567a4;{% endif %}">11+</span></span></td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">SPF 50+ /hr</td>
+                <td style="text-align:center;padding:6px 8px;border-top:1px solid var(--border-color);">❌ No</td>
+                <td style="padding:6px 0 6px 8px;border-top:1px solid var(--border-color);color:var(--text-secondary);">Stay indoors if possible. Full cover required.{% if uv >= 11 %} <strong style="color:#b567a4;">← now</strong>{% endif %}</td>
+              </tr>
+              {% endwith %}
+            </tbody>
+          </table>
+          <p style="font-size:0.72em;color:var(--text-secondary);margin:10px 0 0;text-align:right;">UV data: <a href="https://www.weatherapi.com" target="_blank" rel="noopener" style="color:inherit;">WeatherAPI</a></p>
+        </div>
+
+      </div>
+
+      <script>
+      (function() {
+        var HOURLY = {{ uv_hourly_json|safe }};
+        if (!HOURLY || !HOURLY.length) return;
+        var SUNRISE_H = {{ current.sunrise_dt.hour|default:6 }};
+        var SUNSET_H  = {{ current.sunset_dt.hour|default:20 }};
+        var NOW_IDX   = {{ current.uv.now_idx|default:12 }};
+
+        var W=700, H=165, LABEL_Y=182;
+        var n=HOURLY.length;
+        var xOf=function(i){return (i/(n-1))*W;};
+        var yOf=function(v){return H-(v/11)*(H-10);};
+        var pts=HOURLY.map(function(d,i){return {x:xOf(i),y:yOf(d.uv)};});
+
+        function buildLine(){
+          // Catmull-Rom → cubic bezier: uses neighboring points for control
+          // handles so the curve doesn't overshoot at near-equal values.
+          var t=0.35;
+          var d='M '+pts[0].x.toFixed(1)+' '+pts[0].y.toFixed(1);
+          for(var i=1;i<pts.length;i++){
+            var p0=pts[Math.max(0,i-2)],p1=pts[i-1],p2=pts[i],p3=pts[Math.min(pts.length-1,i+1)];
+            var cp1x=p1.x+(p2.x-p0.x)*t, cp1y=p1.y+(p2.y-p0.y)*t;
+            var cp2x=p2.x-(p3.x-p1.x)*t, cp2y=p2.y-(p3.y-p1.y)*t;
+            // clamp y so the curve never dips below baseline or above chart top
+            cp1y=Math.max(0,Math.min(H,cp1y));
+            cp2y=Math.max(0,Math.min(H,cp2y));
+            d+=' C '+cp1x.toFixed(1)+' '+cp1y.toFixed(1)+' '+cp2x.toFixed(1)+' '+cp2y.toFixed(1)+' '+p2.x.toFixed(1)+' '+p2.y.toFixed(1);
+          }
+          return d;
+        }
+        var linePath=buildLine();
+        var areaPath=linePath+' L '+pts[n-1].x+' '+H+' L '+pts[0].x+' '+H+' Z';
+
+        ['uvFGreen','uvFYellow','uvFOrange','uvFRed'].forEach(function(id){
+          document.getElementById(id).setAttribute('d',areaPath);
+        });
+        document.getElementById('uvHillLine').setAttribute('d',linePath);
+
+        var y2=yOf(2),y5=yOf(5),y7=yOf(7),y10=yOf(10);
+        function setCR(id,y,h){var r=document.getElementById(id);r.setAttribute('y',y.toFixed(1));r.setAttribute('height',Math.max(0,h).toFixed(1));}
+        setCR('uvCrGreen',y2,H-y2); setCR('uvCrYellow',y5,y2-y5); setCR('uvCrOrange',y7,y5-y7); setCR('uvCrRed',y10,y7-y10);
+
+        function setLY(id,y){var el=document.getElementById(id);el.setAttribute('y1',y.toFixed(1));el.setAttribute('y2',y.toFixed(1));}
+        setLY('uvGridLow',y2); setLY('uvGridMod',y5); setLY('uvGridHigh',y7);
+
+        // Night/dawn/dusk backgrounds based on sunrise/sunset
+        var xSR=xOf(SUNRISE_H), xSRend=xOf(Math.min(SUNRISE_H+2,n-1));
+        var xSS=xOf(Math.max(SUNSET_H-2,0)), xSSend=xOf(Math.min(SUNSET_H,n-1));
+        var nightL=document.getElementById('uvNightL');
+        nightL.setAttribute('width',xSR.toFixed(1));
+        var nightR=document.getElementById('uvNightR');
+        nightR.setAttribute('x',xSSend.toFixed(1)); nightR.setAttribute('width',(W-xSSend).toFixed(1));
+        var dawn=document.getElementById('uvDawn');
+        dawn.setAttribute('x',xSR.toFixed(1)); dawn.setAttribute('width',(xSRend-xSR).toFixed(1));
+        document.getElementById('uvDawnG').setAttribute('x1',xSR); document.getElementById('uvDawnG').setAttribute('x2',xSRend);
+        dawn.setAttribute('fill','url(#uvDawnG)');
+        var dusk=document.getElementById('uvDusk');
+        dusk.setAttribute('x',xSS.toFixed(1)); dusk.setAttribute('width',(xSSend-xSS).toFixed(1));
+        document.getElementById('uvDuskG').setAttribute('x1',xSS); document.getElementById('uvDuskG').setAttribute('x2',xSSend);
+        dusk.setAttribute('fill','url(#uvDuskG)');
+
+        // Dark mode: override night colour
+        var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+        var nightCol=isDark?'#1a2740':'#c5cff0';
+        nightL.setAttribute('fill',nightCol); nightR.setAttribute('fill',nightCol);
+        var dawnStop0=document.querySelector('#uvDawnG stop:first-child');
+        var duskStopL=document.querySelector('#uvDuskG stop:last-child');
+        if(dawnStop0) dawnStop0.setAttribute('stop-color',nightCol);
+        if(duskStopL) duskStopL.setAttribute('stop-color',nightCol);
+
+        // Now crosshair
+        var nx=pts[NOW_IDX].x, ny=pts[NOW_IDX].y;
+        var nl=document.getElementById('uvNowLine');
+        nl.setAttribute('x1',nx.toFixed(1)); nl.setAttribute('y1','0');
+        nl.setAttribute('x2',nx.toFixed(1)); nl.setAttribute('y2',H);
+        var nr=document.getElementById('uvNowRing');
+        nr.setAttribute('cx',nx.toFixed(1)); nr.setAttribute('cy',ny.toFixed(1)); nr.setAttribute('r','5');
+        var nd=document.getElementById('uvNowDot');
+        nd.setAttribute('cx',nx.toFixed(1)); nd.setAttribute('cy',ny.toFixed(1));
+
+        // Time axis labels (every 4 hours)
+        var axis=document.getElementById('uvAxis');
+        HOURLY.forEach(function(d,i){
+          if(d.hour_int%4!==0)return;
+          var t=document.createElementNS('http://www.w3.org/2000/svg','text');
+          t.setAttribute('x',pts[i].x.toFixed(1)); t.setAttribute('y',LABEL_Y);
+          t.textContent=d.time; axis.appendChild(t);
+        });
+
+        // Y-axis labels
+        var yLabels=[{v:0,l:'0',c:'var(--text-secondary)'},{v:2,l:'2',c:'#3ea72d'},{v:5,l:'5',c:'#c8a000'},{v:7,l:'7',c:'#f18b00'},{v:10,l:'10',c:'#e53210'},{v:11,l:'11+',c:'#b567a4'}];
+        var yAxis=document.getElementById('uvYAxis');
+        yLabels.forEach(function(item){
+          var t=document.createElementNS('http://www.w3.org/2000/svg','text');
+          t.setAttribute('x','5'); t.setAttribute('y',yOf(item.v===0?0.1:item.v).toFixed(1));
+          t.setAttribute('dominant-baseline',item.v===0?'auto':'middle');
+          t.setAttribute('fill',item.c); t.textContent=item.l; yAxis.appendChild(t);
+        });
+
+        // Animate
+        var line=document.getElementById('uvHillLine');
+        var len=line.getTotalLength();
+        line.style.strokeDasharray=len; line.style.strokeDashoffset=len;
+        setTimeout(function(){
+          line.style.strokeDashoffset='0';
+          document.querySelectorAll('.uv-fzone').forEach(function(el){el.style.opacity='1';});
+        },80);
+      })();
+      </script>
+      {% endif %}
+
       <!-- Compact view container — shown by default -->
       <div id="compactViewContainer"
            style="margin-top: 8px; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; background: var(--bg-secondary);">
@@ -1526,17 +1818,6 @@
       </div>
 
       <!-- Radar map container — hidden by default -->
-      <div id="radarContainer" style="display:none; margin-top:8px; border:1px solid var(--border-color); border-radius:12px; overflow:hidden;">
-        <div style="padding:8px 12px; background:var(--bg-secondary); display:flex; align-items:center; justify-content:space-between;">
-          <span style="font-size:0.8em; color:var(--text-secondary);">Live radar · updated every few minutes{% if is_canada %} · MSC GeoMet / Environment Canada{% endif %}</span>
-          <button onclick="toggleRadar()" style="background:transparent; border:1px solid var(--border-color); color:var(--text-secondary); padding:4px 10px; border-radius:20px; font-size:0.78em; cursor:pointer;">← forecast</button>
-        </div>
-        <div id="radarMap" style="height:420px;"></div>
-        <div style="padding:6px 12px; background:var(--bg-secondary); border-top:1px solid var(--border-color);">
-          <span style="font-size:0.75em; color:var(--text-secondary); font-style:italic;">{% if is_canada %}Showing Canadian radar. For US coverage, search a US city.{% else %}Showing US radar. For Canadian coverage, search a Canadian city.{% endif %}</span>
-        </div>
-      </div>
-
       {% comment %} Moon Modal — outside weather-grid so it's visible in compact mode {% endcomment %}
       <div id="moonModal" class="modal-overlay" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
@@ -2531,35 +2812,23 @@
       function toggleRadar() {
         const container = document.getElementById('radarContainer');
         const btn = document.getElementById('radarBtn');
-        const weatherGrid = document.querySelector('.weather-grid');
-        const compactContainer = document.getElementById('compactViewContainer');
-        const skyWidget = document.getElementById('glanceSkyWidget');
-        const viewToggle = document.getElementById('viewToggleBtn');
         radarVisible = !radarVisible;
-        if (radarVisible) {
-          container.style.display = 'block';
-          if (compactContainer) compactContainer.style.display = 'none';
-          if (skyWidget) skyWidget.style.display = 'none';
-          if (weatherGrid) weatherGrid.style.display = 'none';
-          compactViewVisible = false;
-        } else {
-          container.style.display = 'none';
-          const wasDetails = viewToggle && viewToggle.classList.contains('details-mode');
-          if (!wasDetails) {
-            if (compactContainer) compactContainer.style.display = 'block';
-            if (skyWidget) skyWidget.style.display = 'flex';
-            compactViewVisible = true;
-          } else {
-            if (weatherGrid) weatherGrid.style.display = '';
-            compactViewVisible = false;
-          }
-        }
+        container.style.display = radarVisible ? 'block' : 'none';
         btn.classList.toggle('details-mode', radarVisible);
         if (radarVisible && !radarInitialized) {
           initRadarMap();
         } else if (radarVisible && radarMap) {
           radarMap.invalidateSize();
         }
+      }
+
+      function toggleUV() {
+        const card = document.querySelector('.uv-card');
+        const btn  = document.getElementById('uvToggleBtn');
+        if (!card || !btn) return;
+        const visible = card.style.display !== 'none';
+        card.style.display = visible ? 'none' : '';
+        btn.classList.toggle('details-mode', !visible);
       }
 
       function initRadarMap() {
