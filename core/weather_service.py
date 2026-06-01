@@ -149,6 +149,14 @@ class WeatherService:
             raw = re.sub(r'[\s-]', '', address.strip()).upper()
             address = f"{raw[:3]} {raw[3:]}"
 
+        # Normalize common Canadian province abbreviation aliases so geocoders
+        # get the official two-letter code (e.g. "QU" and "PQ" both mean QC).
+        _CA_PROV_ALIASES = {'qu': 'QC', 'pq': 'QC', 'nf': 'NL', 'pei': 'PE'}
+        if is_canadian:
+            tokens = re.split(r'([\s,]+)', address)
+            new_tokens = [_CA_PROV_ALIASES.get(t.lower(), t) if re.fullmatch(r'[A-Za-z]{2,3}', t) else t for t in tokens]
+            address = ''.join(new_tokens)
+
         # === CANADIAN POSTAL CODE: geocoder.ca (most reliable for CA postal codes) ===
         if is_canadian and _CA_POSTAL_RE.match(address.strip()):
             try:

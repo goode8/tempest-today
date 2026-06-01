@@ -141,9 +141,16 @@ def get_astronomy_data(lat, lon):
     city = LocationInfo("", "", tz_name, lat, lon)
 
     # Sun calculations (Astral is fine for sun)
-    sun_data = sun(city.observer, date=date.today(), tzinfo=local_tz)
-    sunrise_str = sun_data['sunrise'].strftime('%-I:%M %p')
-    sunset_str = sun_data['sunset'].strftime('%-I:%M %p')
+    # At extreme latitudes the sun may never cross the 6° depression threshold,
+    # causing Astral to raise ValueError (midnight sun / polar night).
+    try:
+        sun_data = sun(city.observer, date=date.today(), tzinfo=local_tz)
+        sunrise_str = sun_data['sunrise'].strftime('%-I:%M %p')
+        sunset_str = sun_data['sunset'].strftime('%-I:%M %p')
+    except ValueError:
+        sun_data = {}
+        sunrise_str = "—"
+        sunset_str = "—"
 
     # Moon phase (still using Astral)
     moon_phase = astral_phase(date.today())
@@ -271,8 +278,8 @@ def get_astronomy_data(lat, lon):
         # "moon_visible": moon_visible,
         "next_full_moon": next_full_moon_str,
         "next_new_moon": next_new_moon_str,
-        "sunrise_dt": sun_data['sunrise'],  # Raw datetime for comparison
-        "sunset_dt": sun_data['sunset'],    # Raw datetime for comparison
+        "sunrise_dt": sun_data.get('sunrise'),
+        "sunset_dt": sun_data.get('sunset'),
         # "moonrise_dt": m_rise,  # Raw datetime for moon visibility logic
         # "moonset_dt": m_set,    # Raw datetime for moon visibility logic
         "timezone": tz_name
