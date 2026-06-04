@@ -1408,6 +1408,13 @@
                     </div>
                   </div>
                   {% endif %}
+
+                  {% if current.moon_next_event %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Moon</div>
+                    <div class="modal-data-value">{{ current.moon_next_event.emoji }} {{ current.moon_next_event.label }} {{ current.moon_next_event.time_str }}</div>
+                  </div>
+                  {% endif %}
                 </div>
               </div>
 
@@ -1496,6 +1503,13 @@
                     <div class="modal-data-label">Recommendation</div>
                     <div id="forecastModalHint" class="modal-data-value"></div>
                   </div>
+
+                  {% if current.moon_next_event %}
+                  <div class="modal-data-item">
+                    <div class="modal-data-label">Moon</div>
+                    <div class="modal-data-value">{{ current.moon_next_event.emoji }} {{ current.moon_next_event.label }} {{ current.moon_next_event.time_str }}</div>
+                  </div>
+                  {% endif %}
                 </div>
               </div>
 
@@ -1840,6 +1854,33 @@
               </div>
             </div>
 
+            {% comment %} Moon arc — yesterday's last event / today / tomorrow's first event {% endcomment %}
+            <div class="modal-section">
+              <div class="modal-data-grid">
+                {% if current.moon_yesterday_highlight %}
+                <div class="modal-data-item">
+                  <div class="modal-data-label">Yesterday</div>
+                  <div class="modal-data-value">{{ current.moon_yesterday_highlight.emoji }} {{ current.moon_yesterday_highlight.time_str }}</div>
+                  <div style="font-size:0.75em; color:var(--text-secondary);">{{ current.moon_yesterday_highlight.label }}</div>
+                </div>
+                {% endif %}
+                {% for evt in current.moon_today_events %}
+                <div class="modal-data-item">
+                  <div class="modal-data-label">Today</div>
+                  <div class="modal-data-value">{{ evt.emoji }} {{ evt.time_str }}</div>
+                  <div style="font-size:0.75em; color:var(--text-secondary);">{{ evt.label }}</div>
+                </div>
+                {% endfor %}
+                {% if current.moon_tomorrow_highlight %}
+                <div class="modal-data-item">
+                  <div class="modal-data-label">Tomorrow</div>
+                  <div class="modal-data-value">{{ current.moon_tomorrow_highlight.emoji }} {{ current.moon_tomorrow_highlight.time_str }}</div>
+                  <div style="font-size:0.75em; color:var(--text-secondary);">{{ current.moon_tomorrow_highlight.label }}</div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
             {% comment %} Upcoming Moon Phases {% endcomment %}
             <div class="modal-section">
               <h4>Upcoming Phases</h4>
@@ -1954,6 +1995,13 @@
                 <div id="glanceModalAqiContainer" class="modal-data-item" style="display:none;">
                   <div class="modal-data-label">{{ current.air_quality.label }}</div>
                   <div class="modal-data-value"><span style="display: inline-block; background: {{ current.air_quality.color }}; color: #fff; font-weight: 700; padding: 2px 10px; border-radius: 999px; vertical-align: middle;">{{ current.air_quality.value }}</span> {{ current.air_quality.category }}{% if current.air_quality.pollutant %} ({{ current.air_quality.pollutant }}){% endif %}</div>
+                </div>
+                {% endif %}
+
+                {% if current.moon_next_event %}
+                <div class="modal-data-item">
+                  <div class="modal-data-label">Moon</div>
+                  <div class="modal-data-value">{{ current.moon_next_event.emoji }} {{ current.moon_next_event.label }} {{ current.moon_next_event.time_str }}</div>
                 </div>
                 {% endif %}
               </div>

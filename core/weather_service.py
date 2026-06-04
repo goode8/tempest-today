@@ -187,7 +187,9 @@ class WeatherService:
                 print(f"geocoder.ca error: {e}")
 
         # === PRIMARY: Try LocationIQ first (if API key available) ===
-        if self.locationiq_api_key:
+        # Skip LocationIQ for US ZIP codes — its postal centroid data is unreliable
+        # (e.g. 94110 maps to the bay). Nominatim handles US ZIPs more accurately.
+        if self.locationiq_api_key and not is_zip:
             try:
                 if is_canadian:
                     query = address if 'canada' in address.lower() else f"{address}, Canada"

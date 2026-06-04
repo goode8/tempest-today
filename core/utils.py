@@ -4,13 +4,174 @@ Utility functions for weather data processing and astronomy calculations
 from astral import LocationInfo
 from astral.sun import sun
 from astral.moon import phase as astral_phase
+import math
 from datetime import date, datetime, timedelta
 from timezonefinder import TimezoneFinder
 import pytz
 
-# Skyfield for accurate moon rise/set
-# from skyfield.api import load, wgs84
-# from skyfield import almanac
+# ── Meeus moonrise/moonset helpers ───────────────────────────────────────────
+
+def _jd(year, month, day):
+    """Julian Day for 0h UT (Meeus Ch. 7)."""
+    if month <= 2:
+        year -= 1
+        month += 12
+    A = year // 100
+    B = 2 - A + A // 4
+    return int(365.25 * (year + 4716)) + int(30.6001 * (month + 1)) + day + B - 1524.5
+
+
+def _theta0(jd):
+    """Apparent sidereal time at Greenwich at 0h UT, degrees (Meeus Ch. 12)."""
+    T = (jd - 2451545.0) / 36525.0
+    return (100.4606184 + 36000.77004 * T + 0.000387933 * T * T) % 360
+
+
+def _interp3(n, y0, y1, y2):
+    """Three-point interpolation (Meeus eq. 3.3). n in [-1, 1]."""
+    a, b = y1 - y0, y2 - y1
+    return y1 + n * (a + b + n * (b - a)) / 2
+
+
+def _moon_pos(jd):
+    """
+    Moon RA (deg), Dec (deg), horizontal parallax (deg).
+    Meeus Ch. 47 low-accuracy series — good to ~1°, gives ~2 min accuracy for rise/set.
+    """
+    T  = (jd - 2451545.0) / 36525.0
+    r  = math.radians
+    Lp = (218.3164477 + 481267.88123421 * T) % 360
+    D  = (297.8501921 + 445267.1114034  * T) % 360
+    M  = (357.5291092 +  35999.0502909  * T) % 360
+    Mp = (134.9633964 + 477198.8675055  * T) % 360
+    F  = ( 93.2720950 + 483202.0175233  * T) % 360
+
+    lon = (Lp
+           + 6.289 * math.sin(r(Mp))
+           - 1.274 * math.sin(r(2*D - Mp))
+           + 0.658 * math.sin(r(2*D))
+           - 0.214 * math.sin(r(2*Mp))
+           - 0.114 * math.sin(r(2*F)))
+
+    lat = (  5.128 * math.sin(r(F))
+           + 0.280 * math.sin(r(Mp + F))
+           + 0.277 * math.sin(r(Mp - F))
+           + 0.173 * math.sin(r(2*D - F))
+           + 0.055 * math.sin(r(2*D - Mp - F)))
+
+    par = (0.9508
+           + 0.0518 * math.cos(r(Mp))
+           + 0.0095 * math.cos(r(2*D - Mp))
+           + 0.0078 * math.cos(r(2*D))
+           + 0.0028 * math.cos(r(2*Mp)))
+
+    eps = 23.4393 - 0.013 * T
+    b, l, e = r(lat), r(lon), r(eps)
+    x = math.cos(b) * math.cos(l)
+    y = math.cos(e) * math.cos(b) * math.sin(l) - math.sin(e) * math.sin(b)
+    z = math.sin(e) * math.cos(b) * math.sin(l) + math.cos(e) * math.sin(b)
+
+    ra  = math.degrees(math.atan2(y, x)) % 360
+    dec = math.degrees(math.asin(z))
+    return ra, dec, par
+
+
+def _calc_moonrise_moonset(lat, lon, today, local_tz):
+    """
+    Meeus Ch. 15 — moonrise and moonset for a local calendar date.
+    Anchors to LOCAL midnight so m in [0,1] always falls within the local day,
+    regardless of UTC offset.
+    """
+    # Convert local midnight to UTC → gives the JD anchor
+    local_midnight = local_tz.localize(datetime(today.year, today.month, today.day))
+    lm_utc = local_midnight.astimezone(pytz.utc)
+    jd_0h = _jd(lm_utc.year, lm_utc.month, lm_utc.day)
+    utc_frac = (lm_utc.hour * 3600 + lm_utc.minute * 60 + lm_utc.second) / 86400.0
+    jd0 = jd_0h + utc_frac
+
+    # GMST at local midnight
+    th0 = (_theta0(jd_0h) + 360.985647 * utc_frac) % 360
+
+    phi = math.radians(lat)
+
+    # Moon positions at local midnight ±1 local day
+    ra0, dec0, _   = _moon_pos(jd0 - 1)
+    ra1, dec1, par = _moon_pos(jd0)
+    ra2, dec2, _   = _moon_pos(jd0 + 1)
+
+    # Unwrap RA so interpolation doesn't jump across 0°/360°
+    if ra1 < ra0: ra1 += 360
+    if ra2 < ra1: ra2 += 360
+
+    # Standard altitude for moon centre (Meeus p. 102)
+    h0  = math.radians(0.7275 * par - 0.5667)
+    phi_r = phi
+
+    cos_H = (math.sin(h0) - math.sin(phi_r) * math.sin(math.radians(dec1))) / \
+            (math.cos(phi_r) * math.cos(math.radians(dec1)))
+    if abs(cos_H) > 1:
+        # Moon circumpolar or never rises — check current altitude for visibility
+        now_local = datetime.now(local_tz)
+        t_frac = (now_local - local_midnight).total_seconds() / 86400.0
+        ra_n, dec_n, _ = _moon_pos(jd0 + t_frac)
+        lha = (th0 + 360.985647 * t_frac + lon - ra_n) % 360
+        if lha > 180: lha -= 360
+        alt = math.degrees(math.asin(
+            math.sin(phi_r) * math.sin(math.radians(dec_n)) +
+            math.cos(phi_r) * math.cos(math.radians(dec_n)) * math.cos(math.radians(lha))
+        ))
+        return None, None, alt > 0
+
+    H0     = math.degrees(math.acos(cos_H))
+    m0     = ((ra1 - lon - th0) / 360) % 1
+    # No % 1 on m_rise/m_set — a negative or >1 value means the event falls on
+    # an adjacent local day and should be returned as None for this date.
+    m_rise = m0 - H0 / 360
+    m_set  = m0 + H0 / 360
+
+    # Two-iteration refinement (no % 1 — preserve which side of midnight)
+    results = {}
+    for label, m in [('rise', m_rise), ('set', m_set)]:
+        for _ in range(2):
+            ra  = _interp3(m, ra0, ra1, ra2)
+            dec = _interp3(m, dec0, dec1, dec2)
+            lha = (th0 + 360.985647 * m + lon - ra) % 360
+            if lha > 180: lha -= 360
+            sin_lha = math.sin(math.radians(lha))
+            if abs(sin_lha) < 1e-6:
+                break
+            h = math.degrees(math.asin(
+                math.sin(phi_r) * math.sin(math.radians(dec)) +
+                math.cos(phi_r) * math.cos(math.radians(dec)) * math.cos(math.radians(lha))
+            ))
+            dm = (h - math.degrees(h0)) / (
+                360 * math.cos(math.radians(dec)) * math.cos(phi_r) * sin_lha
+            )
+            m = m + dm
+        results[label] = m
+
+    def _to_dt(m):
+        # Allow m slightly outside [0,1]: moonrises near midnight belong to
+        # the adjacent local day and are needed for the 3-day display arc.
+        if not (-0.5 < m < 1.5):
+            return None
+        return local_midnight + timedelta(seconds=round(m * 86400))
+
+    rise_dt = _to_dt(results['rise'])
+    set_dt  = _to_dt(results['set'])
+
+    # Moon currently visible?
+    now_local = datetime.now(local_tz)
+    if rise_dt and set_dt:
+        moon_visible = rise_dt <= now_local <= set_dt
+    elif rise_dt and not set_dt:
+        moon_visible = now_local >= rise_dt      # rose today, sets tomorrow
+    elif set_dt and not rise_dt:
+        moon_visible = now_local <= set_dt       # rose yesterday, sets today
+    else:
+        moon_visible = False
+
+    return rise_dt, set_dt, moon_visible
 
 
 def celsius_to_fahrenheit(temp_c):
@@ -159,79 +320,87 @@ def get_astronomy_data(lat, lon):
     # Moon illumination percentage (0-100%)
     moon_illumination = round((1 - abs(moon_phase - 14) / 14) * 100)
 
-    # === SKYFIELD for accurate moonrise/moonset ===
-    # TEMPORARILY DISABLED - accuracy issues need investigation
-    # m_rise = None
-    # m_set = None
-    # moonrise_str = "N/A"
-    # moonset_str = "N/A"
-    
-    # try:
-    #     # Load Skyfield ephemeris data
-    #     eph = load('de421.bsp')  # JPL ephemeris
-    #     earth = eph['earth']
-    #     moon = eph['moon']
-    #     
-    #     # Create observer location
-    #     observer = earth + wgs84.latlon(lat, lon)
-    #     
-    #     # Get timescale
-    #     ts = load.timescale()
-    #     
-    #     # Search for moonrise/moonset today
-    #     t0 = ts.from_datetime(datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=local_tz))
-    #     t1 = ts.from_datetime(datetime.combine(date.today(), datetime.max.time()).replace(tzinfo=local_tz))
-    #     
-    #     # Find rise/set events
-    #     t, y = almanac.find_risings(observer, moon, t0, t1)
-    #     
-    #     # Parse results - y values: True = rise, False = set
-    #     for time, is_rise in zip(t, y):
-    #         dt = time.astimezone(local_tz)
-    #         if is_rise and not m_rise:
-    #             m_rise = dt
-    #             moonrise_str = dt.strftime('%-I:%M %p')
-    #         elif not is_rise and not m_set:
-    #             m_set = dt
-    #             moonset_str = dt.strftime('%-I:%M %p')
-    #     
-    #     # If no rise or set found today
-    #     if not m_rise:
-    #         moonrise_str = "No rise today"
-    #     if not m_set:
-    #         moonset_str = "No set today"
-    #         
-    # except Exception as e:
-    #     # Fallback to "N/A" if Skyfield fails
-    #     print(f"Skyfield error: {e}")
-    #     moonrise_str, moonset_str = "N/A", "N/A"
-    
-    # Calculate moon transit (highest point in sky) - best viewing time
-    # moon_transit_time = None
-    # moon_transit_str = "N/A"
-    # if m_rise and m_set:
-    #     # Moon transit is approximately halfway between rise and set
-    #     time_diff = m_set - m_rise
-    #     moon_transit_time = m_rise + (time_diff / 2)
-    #     moon_transit_str = moon_transit_time.strftime('%-I:%M %p') + " (highest in sky)"
-    
-    # Determine if moon is currently visible
-    # moon_visible = False
-    # if m_rise and m_set:
-    #     if m_rise < m_set:
-    #         # Normal case: moon rises then sets in same day
-    #         moon_visible = m_rise <= current_time <= m_set
-    #     else:
-    #         # Moon set before rise (crosses midnight)
-    #         moon_visible = current_time >= m_rise or current_time <= m_set
-    
+    # Meeus Ch. 15 moonrise / moonset — today, yesterday, tomorrow
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    tomorrow  = today + timedelta(days=1)
+
+    def _moon_day(d):
+        try:
+            rise, set_, vis = _calc_moonrise_moonset(lat, lon, d, local_tz)
+            return {
+                'rise':    rise,
+                'set':     set_,
+                'rise_str': rise.strftime('%-I:%M %p') if rise else "—",
+                'set_str':  set_.strftime('%-I:%M %p')  if set_  else "—",
+                'visible':  vis,
+            }
+        except Exception as e:
+            print(f"Meeus moonrise error ({d}): {e}")
+            return {'rise': None, 'set': None, 'rise_str': "—", 'set_str': "—", 'visible': False}
+
+    moon_yesterday = _moon_day(yesterday)
+    moon_today     = _moon_day(today)
+    moon_tomorrow  = _moon_day(tomorrow)
+
+    m_rise       = moon_today['rise']
+    m_set        = moon_today['set']
+    moonrise_str = moon_today['rise_str']
+    moonset_str  = moon_today['set_str']
+    moon_visible = moon_today['visible']
+
+    # Collect all events from the 3-day window and sort by actual datetime.
+    # Each algorithm can produce events on adjacent local days (m slightly
+    # outside [0,1]), so we bucket by real local date rather than by which
+    # day's algorithm produced the event.
+    def _evt(day, kind):
+        t = day['rise'] if kind == 'rise' else day['set']
+        if t is None:
+            return None
+        return {
+            'time':     t,
+            'time_str': t.strftime('%-I:%M %p'),
+            'label':    'Moonrise' if kind == 'rise' else 'Moonset',
+            'emoji':    '🌕'       if kind == 'rise' else '🌑',
+        }
+
+    _all = [e for e in [
+        _evt(moon_yesterday, 'rise'), _evt(moon_yesterday, 'set'),
+        _evt(moon_today,     'rise'), _evt(moon_today,     'set'),
+        _evt(moon_tomorrow,  'rise'), _evt(moon_tomorrow,  'set'),
+    ] if e is not None]
+    _all.sort(key=lambda e: e['time'])
+
+    # Deduplicate: same event can be computed by two adjacent day algorithms
+    _deduped = []
+    for evt in _all:
+        if _deduped:
+            gap = abs((evt['time'] - _deduped[-1]['time']).total_seconds())
+            if gap < 1800 and evt['label'] == _deduped[-1]['label']:
+                continue
+        _deduped.append(evt)
+
+    _today_start     = local_tz.localize(datetime(today.year, today.month, today.day))
+    _today_end       = _today_start + timedelta(days=1)
+    _yesterday_start = _today_start - timedelta(days=1)
+    _tomorrow_end    = _today_end   + timedelta(days=1)
+
+    moon_today_events     = [e for e in _deduped if _today_start     <= e['time'] < _today_end]
+    _yesterday_evts       = [e for e in _deduped if _yesterday_start <= e['time'] < _today_start]
+    _tomorrow_evts        = [e for e in _deduped if _today_end       <= e['time'] < _tomorrow_end]
+
+    moon_yesterday_highlight = _yesterday_evts[-1] if _yesterday_evts else None
+    moon_tomorrow_highlight  = _tomorrow_evts[0]   if _tomorrow_evts  else None
+
+    _now_local = datetime.now(local_tz)
+    _future = [e for e in _deduped if e['time'] > _now_local]
+    moon_next_event = _future[0] if _future else None
+
     # Find next full moon and new moon
     next_full_moon_str = ""
     next_new_moon_str = ""
-    
+
     try:
-        # Check next 40 days for full and new moons
-        today = date.today()
         for i in range(1, 40):
             check_date = today + timedelta(days=i)
             moon_phase_check = astral_phase(check_date)
@@ -269,18 +438,24 @@ def get_astronomy_data(lat, lon):
     return {
         "sunrise": sunrise_str,
         "sunset": sunset_str,
-        # "moonrise": moonrise_str,
-        # "moonset": moonset_str,
         "moon_name": moon_name,
         "moon_emoji": moon_emoji,
         "moon_illumination": moon_illumination,
-        # "moon_transit": moon_transit_str,
-        # "moon_visible": moon_visible,
+        "moon_visible": moon_visible,
+        "moonrise": moonrise_str,
+        "moonset": moonset_str,
+        "moonrise_dt": m_rise,
+        "moonset_dt": m_set,
+        "moon_yesterday": moon_yesterday,
+        "moon_today": moon_today,
+        "moon_tomorrow": moon_tomorrow,
+        "moon_yesterday_highlight": moon_yesterday_highlight,
+        "moon_tomorrow_highlight": moon_tomorrow_highlight,
+        "moon_next_event": moon_next_event,
+        "moon_today_events": moon_today_events,
         "next_full_moon": next_full_moon_str,
         "next_new_moon": next_new_moon_str,
         "sunrise_dt": sun_data.get('sunrise'),
         "sunset_dt": sun_data.get('sunset'),
-        # "moonrise_dt": m_rise,  # Raw datetime for moon visibility logic
-        # "moonset_dt": m_set,    # Raw datetime for moon visibility logic
         "timezone": tz_name
     }
