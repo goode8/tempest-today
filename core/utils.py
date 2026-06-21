@@ -5,9 +5,137 @@ from astral import LocationInfo
 from astral.sun import sun
 from astral.moon import phase as astral_phase
 import math
+import re
 from datetime import date, datetime, timedelta
 from timezonefinder import TimezoneFinder
 import pytz
+
+
+# ── Region/state/province → capital city mapping ─────────────────────────────
+# Allows bare region names ("Quebec", "California") to resolve to a real city.
+
+_REGION_CAPITALS = {
+    # Canadian provinces & territories
+    "alberta": "Edmonton, Alberta, Canada",
+    "british columbia": "Victoria, British Columbia, Canada",
+    "manitoba": "Winnipeg, Manitoba, Canada",
+    "new brunswick": "Fredericton, New Brunswick, Canada",
+    "newfoundland": "St. John's, Newfoundland, Canada",
+    "newfoundland and labrador": "St. John's, Newfoundland, Canada",
+    "northwest territories": "Yellowknife, Northwest Territories, Canada",
+    "nova scotia": "Halifax, Nova Scotia, Canada",
+    "nunavut": "Iqaluit, Nunavut, Canada",
+    "ontario": "Toronto, Ontario, Canada",
+    "prince edward island": "Charlottetown, Prince Edward Island, Canada",
+    "pei": "Charlottetown, Prince Edward Island, Canada",
+    "quebec": "Quebec City, Quebec, Canada",
+    "québec": "Quebec City, Quebec, Canada",
+    "saskatchewan": "Regina, Saskatchewan, Canada",
+    "yukon": "Whitehorse, Yukon, Canada",
+    # US states
+    "alabama": "Montgomery, AL",
+    "alaska": "Juneau, AK",
+    "arizona": "Phoenix, AZ",
+    "arkansas": "Little Rock, AR",
+    "california": "Sacramento, CA",
+    "colorado": "Denver, CO",
+    "connecticut": "Hartford, CT",
+    "delaware": "Dover, DE",
+    "florida": "Tallahassee, FL",
+    "georgia": "Atlanta, GA",
+    "hawaii": "Honolulu, HI",
+    "idaho": "Boise, ID",
+    "illinois": "Springfield, IL",
+    "indiana": "Indianapolis, IN",
+    "iowa": "Des Moines, IA",
+    "kansas": "Topeka, KS",
+    "kentucky": "Frankfort, KY",
+    "louisiana": "Baton Rouge, LA",
+    "maine": "Augusta, ME",
+    "maryland": "Annapolis, MD",
+    "massachusetts": "Boston, MA",
+    "michigan": "Lansing, MI",
+    "minnesota": "Saint Paul, MN",
+    "mississippi": "Jackson, MS",
+    "missouri": "Jefferson City, MO",
+    "montana": "Helena, MT",
+    "nebraska": "Lincoln, NE",
+    "nevada": "Carson City, NV",
+    "new hampshire": "Concord, NH",
+    "new jersey": "Trenton, NJ",
+    "new mexico": "Santa Fe, NM",
+    "new york": "Albany, NY",
+    "north carolina": "Raleigh, NC",
+    "north dakota": "Bismarck, ND",
+    "ohio": "Columbus, OH",
+    "oklahoma": "Oklahoma City, OK",
+    "oregon": "Salem, OR",
+    "pennsylvania": "Harrisburg, PA",
+    "rhode island": "Providence, RI",
+    "south carolina": "Columbia, SC",
+    "south dakota": "Pierre, SD",
+    "tennessee": "Nashville, TN",
+    "texas": "Austin, TX",
+    "utah": "Salt Lake City, UT",
+    "vermont": "Montpelier, VT",
+    "virginia": "Richmond, VA",
+    "washington": "Olympia, WA",
+    "west virginia": "Charleston, WV",
+    "wisconsin": "Madison, WI",
+    "wyoming": "Cheyenne, WY",
+}
+
+
+def _normalize_query(q):
+    q = q.lower().strip()
+    q = re.sub(r'[.,;:]+\s*', ' ', q)
+    q = re.sub(r'\s+', ' ', q)
+    return q.strip()
+
+
+def _resolve_region_to_capital(address):
+    return _REGION_CAPITALS.get(address.strip().lower(), address)
+
+
+def geocode_query(q):
+    """
+    Geocode a query string to (lat, lon, is_canada).
+    Returns None if the location cannot be found or geocoding fails.
+    Shares the same 30-day cache as the main view.
+    """
+    from django.core.cache import cache
+    from .weather_service import WeatherService
+    from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+
+    q = _normalize_query(q)
+    q = _resolve_region_to_capital(q)
+
+    cache_key = f"geocode_{q.lower().replace(' ', '_')}"
+    cached = cache.get(cache_key)
+    if cached:
+        lat, lon = cached['lat'], cached['lon']
+        location = cached.get('location')
+    else:
+        ws = WeatherService()
+        try:
+            lat, lon, location = ws.get_location_coordinates(q)
+        except (GeocoderTimedOut, GeocoderServiceError, Exception):
+            return None
+        if not location:
+            return None
+        cache.set(cache_key, {'lat': lat, 'lon': lon, 'location': location}, 2592000)
+
+    if lat is None or lon is None:
+        return None
+
+    is_canada = False
+    try:
+        cc = location.raw.get('address', {}).get('country_code', '').upper()
+        is_canada = (cc == 'CA')
+    except (AttributeError, TypeError):
+        is_canada = (41.7 <= lat <= 83.1 and -141.0 <= lon <= -52.6)
+
+    return lat, lon, is_canada
 
 # ── Meeus moonrise/moonset helpers ───────────────────────────────────────────
 

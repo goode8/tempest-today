@@ -1,7 +1,7 @@
 import os
 from django.http import HttpResponse
 from django.urls import path
-from core.views import index, compact_forecast
+from core.views import index, compact_forecast, register_push, update_push_cities
 from django.contrib import admin
 
 SECRET_ADMIN_URL_PATH = os.environ.get('SECRET_ADMIN_URL_PATH', 'default-fallback')
@@ -41,6 +41,8 @@ def robots_txt(request):
 urlpatterns = [
     path("", index, name="index"),
     path("compact/", compact_forecast, name="compact_forecast"),
+    path("register-push/", register_push, name="register_push"),
+    path("update-push-cities/", update_push_cities, name="update_push_cities"),
     path("robots.txt", robots_txt),
-    path(f"{SECRET_ADMIN_URL_PATH}/", admin.site.urls), 
+    path(f"{SECRET_ADMIN_URL_PATH}/", admin.site.urls),
 ]

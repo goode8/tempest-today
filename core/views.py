@@ -1,7 +1,10 @@
 from django.shortcuts import render
 from django.core.cache import cache
 from django.db.models import F
-from .models import SearchLog
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from .models import SearchLog, DeviceToken
 from .weather_service import WeatherService
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from .utils import (
@@ -9,7 +12,10 @@ from .utils import (
     convert_wind_speed,
     degrees_to_cardinal,
     get_astronomy_data,
-    convert_temperature
+    convert_temperature,
+    _normalize_query,
+    _resolve_region_to_capital,
+    _REGION_CAPITALS,
 )
 from datetime import datetime
 from collections import defaultdict
@@ -17,95 +23,6 @@ import re
 import json
 import pytz
 import concurrent.futures
-
-# Map province/state names to their capital cities so that bare region
-# searches ("Quebec", "Ontario", "California") resolve to a real city.
-_REGION_CAPITALS = {
-    # Canadian provinces & territories
-    "alberta": "Edmonton, Alberta, Canada",
-    "british columbia": "Victoria, British Columbia, Canada",
-    "manitoba": "Winnipeg, Manitoba, Canada",
-    "new brunswick": "Fredericton, New Brunswick, Canada",
-    "newfoundland": "St. John's, Newfoundland, Canada",
-    "newfoundland and labrador": "St. John's, Newfoundland, Canada",
-    "northwest territories": "Yellowknife, Northwest Territories, Canada",
-    "nova scotia": "Halifax, Nova Scotia, Canada",
-    "nunavut": "Iqaluit, Nunavut, Canada",
-    "ontario": "Toronto, Ontario, Canada",
-    "prince edward island": "Charlottetown, Prince Edward Island, Canada",
-    "pei": "Charlottetown, Prince Edward Island, Canada",
-    "quebec": "Quebec City, Quebec, Canada",
-    "québec": "Quebec City, Quebec, Canada",
-    "saskatchewan": "Regina, Saskatchewan, Canada",
-    "yukon": "Whitehorse, Yukon, Canada",
-    # US states
-    "alabama": "Montgomery, AL",
-    "alaska": "Juneau, AK",
-    "arizona": "Phoenix, AZ",
-    "arkansas": "Little Rock, AR",
-    "california": "Sacramento, CA",
-    "colorado": "Denver, CO",
-    "connecticut": "Hartford, CT",
-    "delaware": "Dover, DE",
-    "florida": "Tallahassee, FL",
-    "georgia": "Atlanta, GA",
-    "hawaii": "Honolulu, HI",
-    "idaho": "Boise, ID",
-    "illinois": "Springfield, IL",
-    "indiana": "Indianapolis, IN",
-    "iowa": "Des Moines, IA",
-    "kansas": "Topeka, KS",
-    "kentucky": "Frankfort, KY",
-    "louisiana": "Baton Rouge, LA",
-    "maine": "Augusta, ME",
-    "maryland": "Annapolis, MD",
-    "massachusetts": "Boston, MA",
-    "michigan": "Lansing, MI",
-    "minnesota": "Saint Paul, MN",
-    "mississippi": "Jackson, MS",
-    "missouri": "Jefferson City, MO",
-    "montana": "Helena, MT",
-    "nebraska": "Lincoln, NE",
-    "nevada": "Carson City, NV",
-    "new hampshire": "Concord, NH",
-    "new jersey": "Trenton, NJ",
-    "new mexico": "Santa Fe, NM",
-    "new york": "Albany, NY",
-    "north carolina": "Raleigh, NC",
-    "north dakota": "Bismarck, ND",
-    "ohio": "Columbus, OH",
-    "oklahoma": "Oklahoma City, OK",
-    "oregon": "Salem, OR",
-    "pennsylvania": "Harrisburg, PA",
-    "rhode island": "Providence, RI",
-    "south carolina": "Columbia, SC",
-    "south dakota": "Pierre, SD",
-    "tennessee": "Nashville, TN",
-    "texas": "Austin, TX",
-    "utah": "Salt Lake City, UT",
-    "vermont": "Montpelier, VT",
-    "virginia": "Richmond, VA",
-    "washington": "Olympia, WA",
-    "west virginia": "Charleston, WV",
-    "wisconsin": "Madison, WI",
-    "wyoming": "Cheyenne, WY",
-}
-
-def _normalize_query(q):
-    q = q.lower().strip()
-    q = re.sub(r'[.,;:]+\s*', ' ', q)  # normalize punctuation separators to space
-    q = re.sub(r'\s+', ' ', q)
-    q = q.strip()
-    return q
-
-
-def _resolve_region_to_capital(address):
-    """
-    If `address` is just a province or state name, return the capital city
-    string instead so the geocoder gets a real city. Otherwise return as-is.
-    """
-    key = address.strip().lower()
-    return _REGION_CAPITALS.get(key, address)
 
 
 def index(request):
@@ -865,7 +782,8 @@ def compact_forecast(request):
     from django.template.loader import render_to_string
 
     if request.method != "POST":
-        return HttpResponseBadRequest("POST required")
+        from django.shortcuts import redirect
+        return redirect("/", permanent=True)
 
     address = _normalize_query(request.POST.get("address", ""))
     unit = request.POST.get("unit", "F")
@@ -963,3 +881,56 @@ def compact_forecast(request):
         "is_canada": is_canada,
     }, request=request)
     return HttpResponse(html)
+
+
+@csrf_exempt
+@require_POST
+def register_push(request):
+    """Store an FCM device token and the user's current favorite cities."""
+    import json as _json
+    try:
+        body = _json.loads(request.body)
+        token    = (body.get('token') or '').strip()
+        platform = (body.get('platform') or '').strip().lower()
+        cities   = [str(c).strip() for c in (body.get('cities') or []) if c][:3]
+    except (ValueError, AttributeError):
+        return JsonResponse({'ok': False, 'error': 'invalid json'}, status=400)
+
+    if not token or platform not in ('android', 'ios'):
+        return JsonResponse({'ok': False, 'error': 'missing token or platform'}, status=400)
+
+    DeviceToken.objects.update_or_create(
+        token=token,
+        defaults={
+            'platform': platform,
+            'city_1': cities[0] if len(cities) > 0 else '',
+            'city_2': cities[1] if len(cities) > 1 else '',
+            'city_3': cities[2] if len(cities) > 2 else '',
+        }
+    )
+    return JsonResponse({'ok': True})
+
+
+@csrf_exempt
+@require_POST
+def update_push_cities(request):
+    """Update the saved cities for an existing FCM device token."""
+    import json as _json
+    try:
+        body = _json.loads(request.body)
+        token  = (body.get('token') or '').strip()
+        cities = [str(c).strip() for c in (body.get('cities') or []) if c][:3]
+    except (ValueError, AttributeError):
+        return JsonResponse({'ok': False, 'error': 'invalid json'}, status=400)
+
+    if not token:
+        return JsonResponse({'ok': False, 'error': 'missing token'}, status=400)
+
+    updated = DeviceToken.objects.filter(token=token).update(
+        city_1=cities[0] if len(cities) > 0 else '',
+        city_2=cities[1] if len(cities) > 1 else '',
+        city_3=cities[2] if len(cities) > 2 else '',
+    )
+    if not updated:
+        return JsonResponse({'ok': False, 'error': 'token not found'}, status=404)
+    return JsonResponse({'ok': True})
