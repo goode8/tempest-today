@@ -3008,6 +3008,20 @@
         localStorage.removeItem('favorite_' + slot);
       }
 
+      function notifyNativeFavoriteAdded(cityQ) {
+        if (window.TempestNative && window.TempestNative.onFavoriteAdded) {
+          window.TempestNative.onFavoriteAdded(cityQ);
+        }
+      }
+
+      function notifyNativeFavoriteRemoved() {
+        if (window.TempestNative && window.TempestNative.onFavoriteRemoved) {
+          const favs = favGetAll();
+          const cities = [1,2,3].map(i => favs[i] ? favs[i].q : '').filter(Boolean);
+          window.TempestNative.onFavoriteRemoved(JSON.stringify(cities));
+        }
+      }
+
       function syncFavoritesToServer() {
         const token = window.FCM_TOKEN;
         if (!token) return;
@@ -3112,6 +3126,7 @@
 
       function favCommitSave(slot, data) {
         favWrite(slot, data);
+        notifyNativeFavoriteAdded(data.q);
         syncFavoritesToServer();
         favRenderBar();
         // Animate the star
@@ -3218,6 +3233,7 @@
       function favCtxClear(slot) {
         favHideCtxMenu();
         favErase(slot);
+        notifyNativeFavoriteRemoved();
         syncFavoritesToServer();
         favRenderBar();
         favUpdateStar();
