@@ -588,6 +588,16 @@
       transition: all 0.3s ease;
     }
 
+    @keyframes alert-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
+      50%  { box-shadow: 0 0 0 12px rgba(211, 47, 47, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+    }
+
+    .alert-container.from-notification {
+      animation: alert-pulse 0.8s ease-out 3;
+    }
+
     .alert-container:hover {
       transform: translateY(-3px);
       box-shadow: 0 6px 20px rgba(211, 47, 47, 0.3);
@@ -3334,6 +3344,19 @@
               cities: cities
             })
           }).catch(function(){});
+        }
+
+        // Auto-open first alert modal when arriving from a push notification
+        if (new URLSearchParams(window.location.search).get('alert') === '1') {
+          const firstAlert = document.querySelector('.alert-item');
+          const alertContainer = document.querySelector('.alert-container');
+          if (alertContainer) {
+            alertContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            alertContainer.classList.add('from-notification');
+          }
+          if (firstAlert) {
+            setTimeout(function() { openAlertModal(firstAlert); }, 1000);
+          }
         }
       });
     </script>
