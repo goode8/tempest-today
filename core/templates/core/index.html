@@ -2929,7 +2929,11 @@
       const clearBtn = document.getElementById('clearBtn');
 
       if (addressInput && clearBtn) {
+        // Android WebView provides its own clear button — hide ours to avoid duplicates
+        const isAndroidWrapper = !!window.TempestNative;
+
         function updateClearBtn() {
+          if (isAndroidWrapper) { clearBtn.style.display = 'none'; return; }
           clearBtn.style.display = addressInput.value ? 'flex' : 'none';
         }
 
