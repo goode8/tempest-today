@@ -29,6 +29,13 @@ _CA_MAJOR_CITIES = frozenset({
     'whitehorse', 'yellowknife', 'iqaluit', 'lethbridge', 'red deer',
     'medicine hat', 'fort mcmurray', 'prince george', 'kamloops', 'nanaimo',
 })
+_US_STATE_ABBREVS = frozenset({
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
+})
 
 
 # WeatherAPI free tier: 1 000 000 calls/month.  We budget 1/31 of that per day
@@ -144,6 +151,16 @@ class WeatherService:
         # Detect Canadian queries (province names/abbreviations or "canada")
         is_canadian = not is_zip and _is_canadian_query(address)
 
+        # An explicit trailing US state code beats the fuzzy "known Canadian
+        # city name" guess above (e.g. "windsor ca" naming Windsor, CA in
+        # Sonoma County, not Windsor, Ontario just because "windsor" is also a
+        # major Canadian city). No US state code collides with an actual
+        # Canadian province code, so this is unambiguous.
+        if is_canadian:
+            trailing = re.split(r'[,\s]+', address.strip())[-1].upper()
+            if trailing in _US_STATE_ABBREVS:
+                is_canadian = False
+
         # Normalize Canadian postal codes to standard format: "b1p7c1" -> "B1P 7C1"
         if is_canadian and _CA_POSTAL_RE.match(address.strip()):
             raw = re.sub(r'[\s-]', '', address.strip()).upper()
@@ -191,25 +208,55 @@ class WeatherService:
         # (e.g. 94110 maps to the bay). Nominatim handles US ZIPs more accurately.
         if self.locationiq_api_key and not is_zip:
             try:
-                if is_canadian:
-                    query = address if 'canada' in address.lower() else f"{address}, Canada"
-                    country_param = 'ca'
-                elif is_zip:
-                    query = address
-                    country_param = 'us'
-                else:
-                    query = address
-                    country_param = None
+                # If the query ends in a state/province abbreviation, use a
+                # structured query so it's a hard filter — LocationIQ's freeform
+                # search ranks by importance and can ignore the trailing code
+                # entirely (e.g. "ortonville mi" -> Ortonville, MN, which is
+                # more prominent than Ortonville, MI; or "windsor on" -> treating
+                # "on" as a stopword instead of the Ontario code).
+                trailing_parts = re.split(r'[,\s]+', address.strip())
+                trailing_code = trailing_parts[-1].upper() if len(trailing_parts) >= 2 else None
 
-                params = {
-                    'key': self.locationiq_api_key,
-                    'q': query,
-                    'format': 'json',
-                    'limit': 1,
-                    'addressdetails': 1,
-                }
-                if country_param:
-                    params['countrycodes'] = country_param
+                if is_canadian and trailing_code in _CA_PROVINCE_ABBREVS:
+                    params = {
+                        'key': self.locationiq_api_key,
+                        'city': ' '.join(trailing_parts[:-1]),
+                        'state': trailing_code,
+                        'country': 'ca',
+                        'format': 'json',
+                        'limit': 1,
+                        'addressdetails': 1,
+                    }
+                elif not is_canadian and trailing_code in _US_STATE_ABBREVS:
+                    params = {
+                        'key': self.locationiq_api_key,
+                        'city': ' '.join(trailing_parts[:-1]),
+                        'state': trailing_code,
+                        'country': 'us',
+                        'format': 'json',
+                        'limit': 1,
+                        'addressdetails': 1,
+                    }
+                else:
+                    if is_canadian:
+                        query = address if 'canada' in address.lower() else f"{address}, Canada"
+                        country_param = 'ca'
+                    elif is_zip:
+                        query = address
+                        country_param = 'us'
+                    else:
+                        query = address
+                        country_param = None
+
+                    params = {
+                        'key': self.locationiq_api_key,
+                        'q': query,
+                        'format': 'json',
+                        'limit': 1,
+                        'addressdetails': 1,
+                    }
+                    if country_param:
+                        params['countrycodes'] = country_param
 
                 response = requests.get(
                     "https://us1.locationiq.com/v1/search", params=params, timeout=timeout
@@ -272,14 +319,7 @@ class WeatherService:
                     )
             else:
                 parts = re.split(r'[,\s]+', address.strip())
-                us_state_abbrevs = {
-                    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-                    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-                    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-                    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-                    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
-                }
-                if len(parts) >= 2 and parts[-1].upper() in us_state_abbrevs:
+                if len(parts) >= 2 and parts[-1].upper() in _US_STATE_ABBREVS:
                     location = nom.geocode(
                         query={'city': ' '.join(parts[:-1]), 'state': parts[-1].upper(), 'country': 'us'},
                         timeout=timeout, exactly_one=True, addressdetails=True
