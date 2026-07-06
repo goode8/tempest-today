@@ -967,6 +967,92 @@
       </div>
     {% endif %}
 
+    {% comment %} FAQ / Help Modal — always in the DOM, regardless of whether a search has loaded {% endcomment %}
+    <div id="faqModal" class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2 style="margin: 0;">Help / FAQ</h2>
+          <button class="modal-close" onclick="closeFaqModal()" aria-label="Close modal">×</button>
+        </div>
+        <div class="modal-body">
+
+          <div class="modal-section">
+            <h4>Search</h4>
+            <p>Enter a city with its state or province (e.g. "Denver, CO" or "Toronto, ON") or a ZIP/postal code. Street addresses aren't supported.</p>
+            <p>Be sure to set °F / °C to your preference — each new search defaults by country (°F for USA, °C for Canada). Saved favorites remember their own unit setting.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>→ Arrow icon</h4>
+            <p>A → arrow means that row is tappable for more info (for example, the Moon in the sky row).</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Favorites</h4>
+            <p>Once weather is loaded and displaying, check the "Closest Station" to make sure you have the place you want. Then, to save it for later, tap an empty umbrella slot or the empty star by the place name.</p>
+            <p>It's saved when you see the umbrella filled in with the name of the place, and the empty star becomes a colored star.</p>
+            <p>Once you have all three saved, you can overwrite them by loading weather, clicking the empty star next to the place name and choosing which umbrella slot to use.</p>
+            <p>To remove a favorite, load it by tapping the umbrella, wait for it to load, then tap the tiny colored star to the right of the place name.</p>
+            <p>If you're using the Android or iPhone app, you can also opt in for push alerts for emergency weather in up to three favorited places.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Compact view (default)</h4>
+            <p>Shows a condensed 7-day-at-a-glance forecast. Tap any day for more detail, and use the &lt; &gt; arrows at the top to scroll between days.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Detail view</h4>
+            <p>Tap the Detail view toggle to view it, showing daytime highs and nighttime lows for each day. Tap any day for more details. Use the &lt; &gt; arrows at the top to scroll between cards.</p>
+            <p>⬆️ is the high and ⬇️ is the low for that time period.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Moon</h4>
+            <p>Tap the Moon in the sky row (next to sunrise/sunset) for the current phase, % illumination, today's moonrise/moonset times, and the next full and new moon dates.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>UV Index</h4>
+            <p>Shows how strong the sun's UV rays are right now, plus advice for sun conditions based on the level.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>AQI / AQHI (Air Quality)</h4>
+            <p>Shows how polluted the air is right now. USA locations show AQI (Air Quality Index, Good to Hazardous). Canadian locations show AQHI (Air Quality Health Index, Low to Very High).</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>☂️ Umbrella / 🥾 Boot icons</h4>
+            <p>A ☂️ umbrella means rain is expected; a 🥾 boot means snow is expected for that day or period.</p>
+            <p>When we know how much rain or snow to expect, we may also show "a little" or "a lot" near the percent and umbrella/boot icon.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Radar</h4>
+            <p>Tap the Radar button to show a live radar map. If you don't see it appear, scroll down a bit — it loads below the Detailed weather view.</p>
+            <p>Radar data comes from each country's own national weather service, so you'll get the best coverage by loading data from that country (e.g. search a Canadian city for Canadian radar).</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Random search</h4>
+            <p>Leave the search bar empty and press "Check Weather" to see a random USA or Canadian city.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Sometimes no data is available</h4>
+            <p>Weather stations and radar coverage aren't everywhere — a remote location may not have forecast or radar data available. Also, some data we pull, like wind speed or low temperature, is sometimes just missing.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Contact, bug reports & feature requests</h4>
+            <p>Found a bug or have an idea for a feature? <a href="https://www.happylifeunfolding.com/contact/" target="_blank" rel="noopener">Get in touch here</a>.</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
     {% if forecasts %}
 
     {% comment %} <p3>Closest Weather Station: {{current.station_full_name}}</p3> {% endcomment %}
@@ -1908,92 +1994,6 @@
                 </div>
                 {% endif %}
               </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      {% comment %} FAQ / Help Modal {% endcomment %}
-      <div id="faqModal" class="modal-overlay" onclick="closeModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-          <div class="modal-header">
-            <h2 style="margin: 0;">Help / FAQ</h2>
-            <button class="modal-close" onclick="closeFaqModal()" aria-label="Close modal">×</button>
-          </div>
-          <div class="modal-body">
-
-            <div class="modal-section">
-              <h4>Search</h4>
-              <p>Enter a city with its state or province (e.g. "Denver, CO" or "Toronto, ON") or a ZIP/postal code. Street addresses aren't supported.</p>
-              <p>Be sure to set °F / °C to your preference — each new search defaults by country (°F for USA, °C for Canada). Saved favorites remember their own unit setting.</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>→ Arrow icon</h4>
-              <p>A → arrow means that row is tappable for more info (for example, the Moon in the sky row).</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>Favorites</h4>
-              <p>Once weather is loaded and displaying, check the "Closest Station" to make sure you have the place you want. Then, to save it for later, tap an empty umbrella slot or the empty star by the place name.</p>
-              <p>It's saved when you see the umbrella filled in with the name of the place, and the empty star becomes a colored star.</p>
-              <p>Once you have all three saved, you can overwrite them by loading weather, clicking the empty star next to the place name and choosing which umbrella slot to use.</p>
-              <p>To remove a favorite, load it by tapping the umbrella, wait for it to load, then tap the tiny colored star to the right of the place name.</p>
-              <p>If you're using the Android or iPhone app, you can also opt in for push alerts for emergency weather in up to three favorited places.</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>Compact view (default)</h4>
-              <p>Shows a condensed 7-day-at-a-glance forecast. Tap any day for more detail, and use the &lt; &gt; arrows at the top to scroll between days.</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>Detail view</h4>
-              <p>Tap the Detail view toggle to view it, showing daytime highs and nighttime lows for each day. Tap any day for more details. Use the &lt; &gt; arrows at the top to scroll between cards.</p>
-              <p>⬆️ is the high and ⬇️ is the low for that time period.</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>Moon</h4>
-              <p>Tap the Moon in the sky row (next to sunrise/sunset) for the current phase, % illumination, today's moonrise/moonset times, and the next full and new moon dates.</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>UV Index</h4>
-              <p>Shows how strong the sun's UV rays are right now, plus advice for sun conditions based on the level.</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>AQI / AQHI (Air Quality)</h4>
-              <p>Shows how polluted the air is right now. USA locations show AQI (Air Quality Index, Good to Hazardous). Canadian locations show AQHI (Air Quality Health Index, Low to Very High).</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>☂️ Umbrella / 🥾 Boot icons</h4>
-              <p>A ☂️ umbrella means rain is expected; a 🥾 boot means snow is expected for that day or period.</p>
-              <p>When we know how much rain or snow to expect, we may also show "a little" or "a lot" near the percent and umbrella/boot icon.</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>Radar</h4>
-              <p>Tap the Radar button to show a live radar map. If you don't see it appear, scroll down a bit — it loads below the Detailed weather view.</p>
-              <p>Radar data comes from each country's own national weather service, so you'll get the best coverage by loading data from that country (e.g. search a Canadian city for Canadian radar).</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>Random search</h4>
-              <p>Leave the search bar empty and press "Check Weather" to see a random USA or Canadian city.</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>Sometimes no data is available</h4>
-              <p>Weather stations and radar coverage aren't everywhere — a remote location may not have forecast or radar data available. Also, some data we pull, like wind speed or low temperature, is sometimes just missing.</p>
-            </div>
-
-            <div class="modal-section">
-              <h4>Contact, bug reports & feature requests</h4>
-              <p>Found a bug or have an idea for a feature? <a href="https://www.happylifeunfolding.com/contact/" target="_blank" rel="noopener">Get in touch here</a>.</p>
             </div>
 
           </div>
