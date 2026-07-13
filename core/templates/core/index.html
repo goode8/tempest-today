@@ -3029,8 +3029,11 @@
       const clearBtn = document.getElementById('clearBtn');
 
       if (addressInput && clearBtn) {
-        // Android WebView provides its own clear button — hide ours to avoid duplicates
-        const isAndroidWrapper = !!window.TempestNative;
+        // Android WebView provides its own clear button — hide ours to avoid duplicates.
+        // Must check the user agent too: both the Android and iOS wrappers inject
+        // window.TempestNative (iOS uses it for the favorites bridge), so TempestNative
+        // alone can't distinguish them.
+        const isAndroidWrapper = !!window.TempestNative && /android/i.test(navigator.userAgent);
 
         function updateClearBtn() {
           if (isAndroidWrapper) { clearBtn.style.display = 'none'; return; }
