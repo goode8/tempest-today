@@ -79,7 +79,7 @@ def index(request):
             "Halifax, Nova Scotia",
             "Winnipeg, Manitoba",
         ]
-        address = random.choice(random_locations)
+        address = _normalize_query(random.choice(random_locations))
 
     # Resolve bare province/state names to their capital city
     address = _resolve_region_to_capital(address)

@@ -648,6 +648,13 @@
       touch-action: manipulation;
     }
 
+    .fav-slot,
+    .fav-slot * {
+      -webkit-touch-callout: none;  /* suppress iOS long-press callout menu */
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
     .fav-slot-icon {
       display: flex;
       align-items: center;
@@ -3108,6 +3115,13 @@
 
       // ── Storage helpers ──────────────────────────
 
+      // Tolerant match for favorite queries saved before normalization was
+      // applied consistently (e.g. old random-location picks like "Miami, FL"
+      // vs. hand-typed "miami fl") so they still match/can be removed.
+      function _favNormQ(q) {
+        return (q || '').toLowerCase().replace(/[.,;:]+\s*/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+
       function favGetAll() {
         const out = {};
         for (let i = 1; i <= 3; i++) {
@@ -3204,7 +3218,7 @@
         const favs = favGetAll();
         let savedSlot = null;
         for (let i = 1; i <= 3; i++) {
-          if (favs[i] && favs[i].q === currentQ) { savedSlot = i; break; }
+          if (favs[i] && _favNormQ(favs[i].q) === _favNormQ(currentQ)) { savedSlot = i; break; }
         }
         if (savedSlot) {
           btn.innerHTML = '&#x2605;&#xFE0E;';
@@ -3237,7 +3251,7 @@
 
         // Already saved → remove it
         for (let i = 1; i <= 3; i++) {
-          if (favs[i] && favs[i].q === currentQ) {
+          if (favs[i] && _favNormQ(favs[i].q) === _favNormQ(currentQ)) {
             favErase(i);
             syncFavoritesToServer();
             favRenderBar();
@@ -3262,6 +3276,11 @@
       }
 
       function favCommitSave(slot, data) {
+        // Don't allow the same city to occupy more than one slot
+        const favs = favGetAll();
+        for (let i = 1; i <= 3; i++) {
+          if (i !== slot && favs[i] && _favNormQ(favs[i].q) === _favNormQ(data.q)) favErase(i);
+        }
         favWrite(slot, data);
         notifyNativeFavoriteAdded(data.q);
         syncFavoritesToServer();
@@ -3425,7 +3444,7 @@
         const favs = favGetAll();
         let matched = null;
         for (let i = 1; i <= 3; i++) {
-          if (favs[i] && favs[i].q === currentQ) { matched = favs[i]; break; }
+          if (favs[i] && _favNormQ(favs[i].q) === _favNormQ(currentQ)) { matched = favs[i]; break; }
         }
         if (!matched) return;
 
