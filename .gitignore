@@ -1,3 +1,4 @@
+serviceAccountKey.json
 .DS_Store
 env/
 # Old/backup files
@@ -68,6 +69,4 @@ Thumbs.db
 # PythonAnywhere specific
 .pythonanywhere//staticfiles/
 
-# Migrations
-*/migrations/*
-!*/migrations/__init__.py
+

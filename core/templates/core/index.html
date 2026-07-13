@@ -3148,6 +3148,26 @@
         }).catch(function(){});
       }
 
+      // Callable by the native wrapper at any time (app launch with a cached
+      // token, permission granted mid-session, or a refreshed token) — does
+      // not depend on DOMContentLoaded timing like window.FCM_TOKEN does.
+      function tempestRegisterPush(token, platform) {
+        if (!token) return;
+        window.FCM_TOKEN = token;
+        const favs = favGetAll();
+        const cities = [1,2,3].map(i => favs[i] ? favs[i].q : '').filter(Boolean);
+        fetch('/register-push/', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            token: token,
+            platform: platform || '{{ request.client_platform }}',
+            cities: cities
+          })
+        }).catch(function(){});
+      }
+      window.tempestRegisterPush = tempestRegisterPush;
+
       // ── Render bar ───────────────────────────────
 
       function favRenderBar() {
@@ -3435,19 +3455,10 @@
         favSetupLongPress();
         favApplySavedPrefs();
 
-        // Register FCM token with server (native app injects window.FCM_TOKEN)
+        // Register FCM token with server (native app injects window.FCM_TOKEN,
+        // or calls window.tempestRegisterPush(token) directly at any time)
         if (window.FCM_TOKEN) {
-          const favs = favGetAll();
-          const cities = [1,2,3].map(i => favs[i] ? favs[i].q : '').filter(Boolean);
-          fetch('/register-push/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              token: window.FCM_TOKEN,
-              platform: '{{ request.client_platform }}',
-              cities: cities
-            })
-          }).catch(function(){});
+          tempestRegisterPush(window.FCM_TOKEN);
         }
 
         // Auto-open first alert modal when arriving from a push notification

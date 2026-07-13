@@ -169,11 +169,30 @@ class Command(BaseCommand):
             if not title:
                 continue
 
-            msg = messaging.Message(
-                notification=messaging.Notification(title=title, body=body),
-                data={k: str(v) for k, v in data.items()},
-                token=device.token,
-            )
+            notification = messaging.Notification(title=title, body=body)
+            fcm_data = {k: str(v) for k, v in data.items()}
+
+            if device.platform == 'ios':
+                msg = messaging.Message(
+                    notification=notification,
+                    data=fcm_data,
+                    token=device.token,
+                    apns=messaging.APNSConfig(
+                        payload=messaging.APNSPayload(
+                            aps=messaging.Aps(
+                                alert=messaging.ApsAlert(title=title, body=body),
+                                sound='default',
+                                content_available=True,
+                            )
+                        )
+                    ),
+                )
+            else:
+                msg = messaging.Message(
+                    notification=notification,
+                    data=fcm_data,
+                    token=device.token,
+                )
 
             try:
                 messaging.send(msg)
