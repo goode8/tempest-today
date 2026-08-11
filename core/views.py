@@ -32,6 +32,8 @@ def index(request):
     forecasts = []
     current_weather = {}
     address = ""
+    lat = None
+    lon = None
 
     # Support both GET (?q=...&unit=F) and POST (form submission)
     if request.method == "GET":
@@ -43,87 +45,134 @@ def index(request):
         address = _normalize_query(request.POST.get("address", ""))
         unit = request.POST.get("unit", "F")
 
+        # "Use my location" submits raw GPS coordinates (app wrapper only)
+        # instead of a typed address — these bypass forward geocoding below
+        # and get reverse-geocoded instead.
+        raw_lat = request.POST.get("lat", "").strip()
+        raw_lon = request.POST.get("lon", "").strip()
+        if raw_lat and raw_lon:
+            try:
+                candidate_lat, candidate_lon = float(raw_lat), float(raw_lon)
+                if -90 <= candidate_lat <= 90 and -180 <= candidate_lon <= 180:
+                    lat, lon = candidate_lat, candidate_lon
+            except ValueError:
+                pass
+
     weather_service = WeatherService()
-    
-    # If no address provided, show error but pick a random location for fun
     show_random_location_message = False
-    if not address or address.strip() == "":
-        show_random_location_message = True
-        # Pick a random interesting US city
-        import random
-        random_locations = [
-            "Miami, FL",
-            "Seattle, WA",
-            "Denver, CO",
-            "Portland, ME",
-            "Austin, TX",
-            "Chicago, IL",
-            "Phoenix, AZ",
-            "Honolulu, HI",
-            "Anchorage, AK",
-            "Boston, MA",
-            "San Francisco, CA",
-            "New Orleans, LA",
-            "Key West, FL",
-            "Fargo, ND",
-            "Las Vegas, NV",
-            "Portland, OR",
-            "Nashville, TN",
-            "Minneapolis, MN",
-            "San Diego, CA",
-            "Savannah, GA",
-            "Toronto, Ontario",
-            "Vancouver, BC",
-            "Calgary, Alberta",
-            "Montreal, Quebec",
-            "Halifax, Nova Scotia",
-            "Winnipeg, Manitoba",
-        ]
-        address = _normalize_query(random.choice(random_locations))
 
-    # Resolve bare province/state names to their capital city
-    address = _resolve_region_to_capital(address)
+    if lat is not None and lon is not None:
+        # Step 1 (coordinates path): reverse geocode GPS coordinates instead
+        # of forward-geocoding a typed address.
+        geocode_cache_key = f"geocode_rev_{round(lat, 3)}_{round(lon, 3)}"
+        cached_geocode = cache.get(geocode_cache_key)
 
-    # Step 1: Get coordinates from address (with geocoding cache)
-    # Cache geocoding results for 30 days to avoid hitting rate limits
-    geocode_cache_key = f"geocode_{address.lower().replace(' ', '_')}"
-    cached_geocode = cache.get(geocode_cache_key)
-    
-    if cached_geocode:
-        lat, lon, location = cached_geocode['lat'], cached_geocode['lon'], cached_geocode['location']
-    else:
-        try:
-            lat, lon, location = weather_service.get_location_coordinates(address)
-            
-            # Cache the geocoding result for 30 days
+        if cached_geocode:
+            address, location = cached_geocode['address'], cached_geocode['location']
+        else:
+            try:
+                address, location = weather_service.get_address_from_coordinates(lat, lon)
+            except (GeocoderTimedOut, GeocoderServiceError):
+                return render(request, "core/index.html", {
+                    "error_message": "Our location service is temporarily busy. Please try again in a moment.",
+                    "error_type": "timeout",
+                    "unit": unit
+                })
+            except Exception as e:
+                print(f"ERROR reverse geocoding: {type(e).__name__}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                return render(request, "core/index.html", {
+                    "error_message": "Something went wrong. Please try again.",
+                    "error_type": "general",
+                    "unit": unit
+                })
+
+            if not address:
+                address = "My Location"
             if location:
-                cache.set(geocode_cache_key, {
-                    'lat': lat,
-                    'lon': lon,
-                    'location': location
-                }, 2592000)  # 30 days
-        except (GeocoderTimedOut, GeocoderServiceError):
-            return render(request, "core/index.html", {
-                "error_message": "Our location service is temporarily busy. Please try again in a moment.",
-                "error_type": "timeout",
-                "unit": unit
-            })
-        except Exception as e:
-            # Log the error for debugging
-            print(f"ERROR in weather lookup: {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            
-            return render(request, "core/index.html", {
-                "error_message": "Something went wrong. Please try again.",
-                "error_type": "general",
-                "unit": unit
-            })
-    
-    # Check if location was found
+                cache.set(geocode_cache_key, {'address': address, 'location': location}, 2592000)  # 30 days
+    else:
+        # If no address provided, show error but pick a random location for fun
+        if not address or address.strip() == "":
+            show_random_location_message = True
+            # Pick a random interesting US city
+            import random
+            random_locations = [
+                "Miami, FL",
+                "Seattle, WA",
+                "Denver, CO",
+                "Portland, ME",
+                "Austin, TX",
+                "Chicago, IL",
+                "Phoenix, AZ",
+                "Honolulu, HI",
+                "Anchorage, AK",
+                "Boston, MA",
+                "San Francisco, CA",
+                "New Orleans, LA",
+                "Key West, FL",
+                "Fargo, ND",
+                "Las Vegas, NV",
+                "Portland, OR",
+                "Nashville, TN",
+                "Minneapolis, MN",
+                "San Diego, CA",
+                "Savannah, GA",
+                "Toronto, Ontario",
+                "Vancouver, BC",
+                "Calgary, Alberta",
+                "Montreal, Quebec",
+                "Halifax, Nova Scotia",
+                "Winnipeg, Manitoba",
+            ]
+            address = _normalize_query(random.choice(random_locations))
+
+        # Resolve bare province/state names to their capital city
+        address = _resolve_region_to_capital(address)
+
+        # Step 1: Get coordinates from address (with geocoding cache)
+        # Cache geocoding results for 30 days to avoid hitting rate limits
+        geocode_cache_key = f"geocode_{address.lower().replace(' ', '_')}"
+        cached_geocode = cache.get(geocode_cache_key)
+
+        if cached_geocode:
+            lat, lon, location = cached_geocode['lat'], cached_geocode['lon'], cached_geocode['location']
+        else:
+            try:
+                lat, lon, location = weather_service.get_location_coordinates(address)
+
+                # Cache the geocoding result for 30 days
+                if location:
+                    cache.set(geocode_cache_key, {
+                        'lat': lat,
+                        'lon': lon,
+                        'location': location
+                    }, 2592000)  # 30 days
+            except (GeocoderTimedOut, GeocoderServiceError):
+                return render(request, "core/index.html", {
+                    "error_message": "Our location service is temporarily busy. Please try again in a moment.",
+                    "error_type": "timeout",
+                    "unit": unit
+                })
+            except Exception as e:
+                # Log the error for debugging
+                print(f"ERROR in weather lookup: {type(e).__name__}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+
+                return render(request, "core/index.html", {
+                    "error_message": "Something went wrong. Please try again.",
+                    "error_type": "general",
+                    "unit": unit
+                })
+
+    # Check if location was found. GPS coordinates are trusted even when
+    # reverse geocoding can't name them — is_canada/international detection
+    # below falls back to lat/lon bounds in that case.
     try:
 
-        if not location:
+        if not location and lat is None:
             return render(request, "core/index.html", {
                 "error_message": "Location not found. Please check and try again.",
                 "error_type": "not_found",

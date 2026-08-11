@@ -355,6 +355,83 @@ class WeatherService:
         print(f"✗ All geocoders failed for: {address}")
         return None, None, None
 
+    def get_address_from_coordinates(self, lat, lon, timeout=10):
+        """
+        Reverse geocode GPS coordinates ("Use my location") to a short
+        display name plus a geocoder result object.
+        Priority: LocationIQ (primary) -> Nominatim (fallback) -> Photon (fallback 2)
+
+        Returns: tuple (display_name, location) or (None, None) if all providers fail.
+        """
+        if self.locationiq_api_key:
+            try:
+                response = requests.get(
+                    "https://us1.locationiq.com/v1/reverse",
+                    params={
+                        'key': self.locationiq_api_key,
+                        'lat': lat,
+                        'lon': lon,
+                        'format': 'json',
+                        'addressdetails': 1,
+                    },
+                    timeout=timeout,
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    raw_addr = data.get('address', {})
+                    cc = raw_addr.get('country_code', '').upper()
+                    city = raw_addr.get('city') or raw_addr.get('town') or raw_addr.get('village')
+                    state = raw_addr.get('state')
+                    display_name = f"{city}, {state}" if city and state else (city or state or data.get('display_name'))
+                    address_parts = {
+                        'country_code': cc,
+                        'state': state,
+                        'city': city,
+                        'country': raw_addr.get('country', ''),
+                    }
+                    location = LocationIQResult(lat, lon, data.get('display_name'), address_parts)
+                    print(f"✓ LocationIQ reverse: {lat}, {lon} -> {display_name}")
+                    return display_name, location
+
+                print(f"LocationIQ reverse failed (status {response.status_code}), trying Nominatim...")
+
+            except Exception as e:
+                print(f"LocationIQ reverse error: {e}, trying Nominatim...")
+
+        # === FALLBACK 1: Nominatim ===
+        try:
+            nom = Nominatim(user_agent="my_weather_app")
+            location = nom.reverse((lat, lon), timeout=timeout, addressdetails=True, zoom=10)
+            if location:
+                addr = (location.raw or {}).get('address', {})
+                city = addr.get('city') or addr.get('town') or addr.get('village') or addr.get('municipality')
+                state = addr.get('state')
+                display_name = f"{city}, {state}" if city and state else (city or state or location.address)
+                print(f"✓ Nominatim reverse: {lat}, {lon} -> {display_name}")
+                return display_name, location
+
+        except (GeocoderTimedOut, GeocoderServiceError) as e:
+            print(f"Nominatim reverse error: {e}, trying Photon...")
+        except Exception as e:
+            print(f"Nominatim reverse error: {e}, trying Photon...")
+
+        # === FALLBACK 2: Photon ===
+        try:
+            photon = Photon(user_agent="my_weather_app")
+            location = photon.reverse((lat, lon), timeout=timeout)
+            if location:
+                props = (location.raw or {}).get('properties', {})
+                city = props.get('city') or props.get('name')
+                state = props.get('state')
+                display_name = f"{city}, {state}" if city and state else (city or state or location.address)
+                print(f"✓ Photon reverse: {lat}, {lon} -> {display_name}")
+                return display_name, location
+        except Exception as e:
+            print(f"Photon reverse error: {e}")
+
+        print(f"✗ All reverse geocoders failed for: {lat}, {lon}")
+        return None, None
+
     def get_metadata(self, lat, lon):
         """
         Get NWS metadata for coordinates (includes forecast URL, stations URL)

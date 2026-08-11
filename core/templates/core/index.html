@@ -281,6 +281,39 @@
 
     .input-clear:hover { opacity: 1; }
 
+    .locate-btn {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-color, #d1d5db);
+      background: var(--card-bg, #fff);
+      color: var(--text-primary);
+      font-size: 1.1em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: opacity 0.15s;
+    }
+
+    .locate-btn:hover { opacity: 0.75; }
+    .locate-btn.loading { pointer-events: none; opacity: 0.6; }
+    .locate-btn.loading .locate-icon { display: none; }
+
+    .locate-btn .locate-spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--text-secondary);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: btn-spin 0.7s linear infinite;
+    }
+
+    .locate-btn.loading .locate-spinner { display: inline-block; }
+
     button[type="submit"] {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -833,6 +866,14 @@
         <input type="search" id="addressInput" name="address" placeholder="City, State or Province — or Postal Code" autocomplete="off" enterkeyhint="go" value="{{ address }}" />
         <button type="button" class="input-clear" id="clearBtn" aria-label="Clear">✕</button>
       </div>
+      {% if request.client_platform == "ios" or request.client_platform == "android" %}
+      <button type="button" class="locate-btn" id="locateBtn" aria-label="Use my location" title="Use my location">
+        <span class="locate-icon">📍</span>
+        <span class="locate-spinner"></span>
+      </button>
+      {% endif %}
+      <input type="hidden" name="lat" id="lat-input" value="" />
+      <input type="hidden" name="lon" id="lon-input" value="" />
       <input type="hidden" name="unit" id="unit-input" value="{{ unit|default:'F' }}" />
       <button type="submit" id="checkWeatherBtn">
         <span class="btn-text">Check Weather</span>
@@ -3064,6 +3105,56 @@
           if (btn) btn.classList.add('loading');
         });
       }
+
+      // "Use my location" — populates hidden lat/lon inputs from the native
+      // bridge, then submits the form. Only rendered for app-wrapper platforms.
+      const locateBtn = document.getElementById('locateBtn');
+      const latInput = document.getElementById('lat-input');
+      const lonInput = document.getElementById('lon-input');
+      let locateTimeoutId = null;
+
+      // Typing a new address should never resubmit stale coordinates from a
+      // previous "use my location" tap.
+      if (addressInput && latInput && lonInput) {
+        addressInput.addEventListener('input', function() {
+          latInput.value = '';
+          lonInput.value = '';
+        });
+      }
+
+      if (locateBtn && latInput && lonInput) {
+        locateBtn.addEventListener('click', function() {
+          if (!window.TempestNative || typeof window.TempestNative.requestLocation !== 'function') return;
+
+          locateBtn.classList.add('loading');
+          clearTimeout(locateTimeoutId);
+          locateTimeoutId = setTimeout(function() {
+            locateBtn.classList.remove('loading');
+          }, 12000);
+
+          window.TempestNative.requestLocation();
+        });
+      }
+
+      // Called by the native wrapper once GPS coordinates are available.
+      function tempestLocationReceived(lat, lon) {
+        clearTimeout(locateTimeoutId);
+        if (locateBtn) locateBtn.classList.remove('loading');
+        if (latInput && lonInput && weatherForm) {
+          latInput.value = lat;
+          lonInput.value = lon;
+          if (weatherForm.requestSubmit) { weatherForm.requestSubmit(); } else { weatherForm.submit(); }
+        }
+      }
+      window.tempestLocationReceived = tempestLocationReceived;
+
+      // Called by the native wrapper when location fails, is denied, or times out.
+      function tempestLocationFailed(reason) {
+        clearTimeout(locateTimeoutId);
+        if (locateBtn) locateBtn.classList.remove('loading');
+        console.log('Location unavailable: ' + reason);
+      }
+      window.tempestLocationFailed = tempestLocationFailed;
 
       document.addEventListener('DOMContentLoaded', function() {
         const originalUnit = '{{ unit|default:"F" }}';
