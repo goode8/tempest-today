@@ -244,6 +244,16 @@
       color: #f3f4f6;
     }
 
+    /* Keeps the city box and the 📍 locate button side-by-side on one line */
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      max-width: 470px;
+      min-width: 200px;
+    }
+
     .input-wrapper {
       position: relative;
       display: flex;
@@ -380,8 +390,13 @@
           font-size: 16px; /* Prevents zoom on iOS */
         }
 
+        .search-row {
+          width: 100%;
+          max-width: 440px;
+        }
+
         .input-wrapper {
-          max-width: 400px;
+          max-width: none;
           width: 100%;
         }
 
@@ -862,16 +877,18 @@
   <div class="main-container">
     <form method="post" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
       {% csrf_token %}
-      <div class="input-wrapper">
-        <input type="search" id="addressInput" name="address" placeholder="City, State or Province — or Postal Code" autocomplete="off" enterkeyhint="go" value="{{ address }}" />
-        <button type="button" class="input-clear" id="clearBtn" aria-label="Clear">✕</button>
+      <div class="search-row">
+        <div class="input-wrapper">
+          <input type="search" id="addressInput" name="address" placeholder="City, State or Province — or Postal Code" autocomplete="off" enterkeyhint="go" value="{{ address }}" />
+          <button type="button" class="input-clear" id="clearBtn" aria-label="Clear">✕</button>
+        </div>
+        {% if request.client_platform == "ios" or request.client_platform == "android" %}
+        <button type="button" class="locate-btn" id="locateBtn" aria-label="Use my location" title="Use my location">
+          <span class="locate-icon">📍</span>
+          <span class="locate-spinner"></span>
+        </button>
+        {% endif %}
       </div>
-      {% if request.client_platform == "ios" or request.client_platform == "android" %}
-      <button type="button" class="locate-btn" id="locateBtn" aria-label="Use my location" title="Use my location">
-        <span class="locate-icon">📍</span>
-        <span class="locate-spinner"></span>
-      </button>
-      {% endif %}
       <input type="hidden" name="lat" id="lat-input" value="" />
       <input type="hidden" name="lon" id="lon-input" value="" />
       <input type="hidden" name="unit" id="unit-input" value="{{ unit|default:'F' }}" />
