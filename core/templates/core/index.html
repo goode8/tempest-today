@@ -882,7 +882,7 @@
           <input type="search" id="addressInput" name="address" placeholder="City, State or Province — or Postal Code" autocomplete="off" enterkeyhint="go" value="{{ address }}" />
           <button type="button" class="input-clear" id="clearBtn" aria-label="Clear">✕</button>
         </div>
-        {% if request.client_platform == "ios" or request.client_platform == "android" %}
+        {% if request.client_platform == "android" %}
         <button type="button" class="locate-btn" id="locateBtn" aria-label="Use my location" title="Use my location">
           <span class="locate-icon">📍</span>
           <span class="locate-spinner"></span>
