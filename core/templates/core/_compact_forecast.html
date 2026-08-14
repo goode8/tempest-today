@@ -159,7 +159,9 @@
   .cc-day {
     font-weight: 600;
     font-size: 0.95em;
-    min-width: 72px;
+    width: 88px;
+    flex-shrink: 0;
+    white-space: nowrap;
     color: var(--text-primary);
   }
 
@@ -167,6 +169,7 @@
     font-family: 'Noto Color Emoji', sans-serif;
     font-size: 1.5em;
     text-align: center;
+    width: 32px;
     flex-shrink: 0;
   }
 
@@ -375,7 +378,7 @@
 
   <!-- Single header row -->
   <div style="display:flex; justify-content:space-between; padding: 0 14px 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 4px;">
-    <span style="font-size:0.75em; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; min-width:72px;">Day</span>
+    <span style="font-size:0.75em; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; width:88px; flex-shrink:0;">Day</span>
     <span style="font-size:0.75em; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; flex:1; text-align:center;">High / Low</span>
     <span style="font-size:0.75em; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; min-width:52px; text-align:right;">Precip</span>
   </div>
