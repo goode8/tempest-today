@@ -1046,9 +1046,17 @@
         <div class="modal-body">
 
           <div class="modal-section">
-            <h4>Search</h4>
-            <p>Enter a city with its state or province (e.g. "Denver, CO" or "Toronto, ON") or a ZIP/postal code. Street addresses aren't supported.</p>
-            <p>Be sure to set °F / °C to your preference — each new search defaults by country (°F for USA, °C for Canada). Saved favorites remember their own unit setting.</p>
+            <h4>📍 Use Your Current Location</h4>
+            <p>On the iPhone and Android apps, tap the red pin 📍 next to "Check Weather" to load weather for wherever you are &mdash; no typing needed.</p>
+            <p>The first time you tap it, your phone will ask you to approve location access. If you say no, or want to change your mind later, you can turn it back on here:</p>
+            <p>iPhone: Settings &gt; Tempest Today &gt; Location<br>Android: Settings &gt; Apps &gt; Tempest Today &gt; Permissions &gt; Location</p>
+            <p>Don't have the app? <a href="#support" onclick="goToSupportFromFaq(event);">Get it for iPhone or Android</a> to unlock this and other app-only features.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>🔍 Search</h4>
+            <p>Enter a city with its state or province (e.g. "Denver, CO" or "Toronto, ON") or a ZIP/postal code, then press "Check Weather." Street addresses aren't supported.</p>
+            <p>Be sure to set °F / °C to your preference — each new search defaults by country (°F for USA, °C for Canada).</p>
           </div>
 
           <div class="modal-section">
@@ -1057,37 +1065,44 @@
           </div>
 
           <div class="modal-section">
-            <h4>Favorites</h4>
+            <h4><img src="{% static 'images/grey.png' %}" alt="" width="22" height="22" style="vertical-align: -4px; margin-right: 2px;"> Favorites</h4>
             <p>Once weather is loaded and displaying, check the "Closest Station" to make sure you have the place you want. Then, to save it for later, tap an empty umbrella slot or the empty star by the place name.</p>
             <p>It's saved when you see the umbrella filled in with the name of the place, and the empty star becomes a colored star.</p>
             <p>Once you have all three saved, you can overwrite them by loading weather, clicking the empty star next to the place name and choosing which umbrella slot to use.</p>
             <p>To remove a favorite, load it by tapping the umbrella, wait for it to load, then tap the tiny colored star to the right of the place name.</p>
-            <p>If you're using the Android or iPhone app, you can also opt in for push alerts for emergency weather in up to three favorited places.</p>
           </div>
 
           <div class="modal-section">
-            <h4>Compact view (default)</h4>
+            <h4>🔔 Emergency Weather Notifications</h4>
+            <p>On the iPhone and Android apps, opt in to get a push notification when emergency weather hits one of your favorited places &mdash; up to three at a time.</p>
+            <p>The first time you turn this on, your phone will ask you to approve notifications. If you say no, or want to change your mind later, you can turn it back on here:</p>
+            <p>iPhone: Settings &gt; Tempest Today &gt; Notifications<br>Android: Settings &gt; Apps &gt; Tempest Today &gt; Permissions &gt; Notifications</p>
+            <p>Don't have the app? <a href="#support" onclick="goToSupportFromFaq(event);">Get it for iPhone or Android</a> to unlock this and other app-only features.</p>
+          </div>
+
+          <div class="modal-section">
+            <h4>Glance view (default)</h4>
             <p>Shows a condensed 7-day-at-a-glance forecast. Tap any day for more detail, and use the &lt; &gt; arrows at the top to scroll between days.</p>
           </div>
 
           <div class="modal-section">
-            <h4>Detail view</h4>
-            <p>Tap the Detail view toggle to view it, showing daytime highs and nighttime lows for each day. Tap any day for more details. Use the &lt; &gt; arrows at the top to scroll between cards.</p>
+            <h4>Details view</h4>
+            <p>Tap the Glance / Details toggle to switch to it, showing daytime highs and nighttime lows for each day. Tap any day for more details. Use the &lt; &gt; arrows at the top to scroll between cards.</p>
             <p>⬆️ is the high and ⬇️ is the low for that time period.</p>
           </div>
 
           <div class="modal-section">
-            <h4>Moon</h4>
+            <h4>🌙 Moon</h4>
             <p>Tap the Moon in the sky row (next to sunrise/sunset) for the current phase, % illumination, today's moonrise/moonset times, and the next full and new moon dates.</p>
           </div>
 
           <div class="modal-section">
-            <h4>UV Index</h4>
+            <h4>☀️ UV Index</h4>
             <p>Shows how strong the sun's UV rays are right now, plus advice for sun conditions based on the level.</p>
           </div>
 
           <div class="modal-section">
-            <h4>AQI / AQHI (Air Quality)</h4>
+            <h4>🫁 AQI / AQHI (Air Quality)</h4>
             <p>Shows how polluted the air is right now. USA locations show AQI (Air Quality Index, Good to Hazardous). Canadian locations show AQHI (Air Quality Health Index, Low to Very High).</p>
           </div>
 
@@ -1098,13 +1113,13 @@
           </div>
 
           <div class="modal-section">
-            <h4>Radar</h4>
+            <h4>📡 Radar</h4>
             <p>Tap the Radar button to show a live radar map. If you don't see it appear, scroll down a bit — it loads below the Detailed weather view.</p>
             <p>Radar data comes from each country's own national weather service, so you'll get the best coverage by loading data from that country (e.g. search a Canadian city for Canadian radar).</p>
           </div>
 
           <div class="modal-section">
-            <h4>Random search</h4>
+            <h4>🎲 Random search</h4>
             <p>Leave the search bar empty and press "Check Weather" to see a random USA or Canadian city.</p>
           </div>
 
@@ -1114,7 +1129,7 @@
           </div>
 
           <div class="modal-section">
-            <h4>Contact, bug reports & feature requests</h4>
+            <h4>✉️ Contact, bug reports & feature requests</h4>
             <p>Found a bug or have an idea for a feature? <a href="https://www.happylifeunfolding.com/contact/" target="_blank" rel="noopener">Get in touch here</a>.</p>
           </div>
 
@@ -2499,6 +2514,18 @@
       function closeFaqModal() {
         document.getElementById('faqModal').classList.remove('active');
         document.body.style.overflow = '';
+      }
+
+      function goToSupportFromFaq(event) {
+        event.preventDefault();
+        closeFaqModal();
+        // Wait a frame for the modal to actually unhide the page before scrolling.
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+            const target = document.getElementById('support');
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        });
       }
 
       function openAlertModal(alertElement) {
