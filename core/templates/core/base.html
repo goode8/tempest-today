@@ -44,12 +44,14 @@
     }
 
     [data-theme="dark"] {
-      --bg-primary: #1f2937;
-      --bg-secondary: #111827;
-      --text-primary: #f9fafb;
-      --text-secondary: #9ca3af;
-      --border-color: #374151;
-      --card-bg: #374151;
+      /* Elevation goes lighter as surfaces rise (Material/iOS dark-mode practice):
+         page (darkest) -> cards -> top surfaces. Text is off-white to cut halation. */
+      --bg-primary: #131a24;   /* page + modal panels (base) */
+      --bg-secondary: #1e2836; /* raised cards / inputs / wells */
+      --text-primary: #e8edf2; /* off-white, not pure #fff */
+      --text-secondary: #9aa6b4;
+      --border-color: #313d4d;
+      --card-bg: #2a3646;      /* highest surface: chart plot, hover */
       --alert-bg: #7f1d1d;
     }
 
