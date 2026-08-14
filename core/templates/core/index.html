@@ -882,8 +882,8 @@
           <input type="search" id="addressInput" name="address" placeholder="City, State or Province — or Postal Code" autocomplete="off" enterkeyhint="go" value="{{ address }}" />
           <button type="button" class="input-clear" id="clearBtn" aria-label="Clear">✕</button>
         </div>
-        {% if request.client_platform == "android" %}
-        <button type="button" class="locate-btn" id="locateBtn" aria-label="Use my location" title="Use my location">
+        {% if request.show_locate %}
+        <button type="button" class="locate-btn" id="locateBtn" aria-label="Use my location" title="Use my location"{% if request.client_platform == "ios" %} style="display: none;"{% endif %}>
           <span class="locate-icon">📍</span>
           <span class="locate-spinner"></span>
         </button>
@@ -1309,7 +1309,7 @@
                onclick="openForecastModal(this)"
                style="cursor: pointer;"
                data-period-name="{{ period.name }}"
-               data-period-temp="{{ period.temperature }}"
+               data-period-temp="{% if period.temperature != None and period.temperature != 'N/A' %}{{ period.temperature }}{% endif %}"
                data-period-short="{{ period.shortForecast }}"
                data-period-detailed="{{ period.detailedForecast|escapejs }}"
                data-period-wind-speed="{{ period.windSpeed }}"
@@ -1377,6 +1377,8 @@
               {% endwith %}
             </div>
 
+            {# Current period's high already peaked earlier today — omit the stale number #}
+            {% if not period.hide_temp %}
             <p style="font-size: 1.5em; margin: 0">
             {% if period.temperature != "N/A" and period.temperature %}
               <span data-temp="{{ period.temperature }}">{{ period.temperature }}°</span>
@@ -1389,6 +1391,7 @@
               <span style="font-size: 0.9em; color: var(--text-secondary);">Temp unavailable</span>
             {% endif %}
             </p>
+            {% endif %}
 
             <p class="desc" style="font-size: 0.9em; margin: 5px 0;">
               {{ period.shortForecast }}
@@ -2980,7 +2983,7 @@
           const name  = (card.dataset.periodName || '').toLowerCase();
           const temp  = card.dataset.periodTemp;
           const isDay = card.dataset.periodIsDay === 'True';
-          if (!temp) return;
+          if (!temp || temp === 'None' || temp === 'N/A') return;
           let dayKey;
           if (name === 'today' || name.startsWith('this ')) dayKey = 'today';
           else if (name === 'tonight')                       dayKey = 'today';
@@ -3137,6 +3140,21 @@
           latInput.value = '';
           lonInput.value = '';
         });
+      }
+
+      // The locate button is hidden on iOS until we confirm the native location
+      // bridge exists. Only the working app build injects window.TempestNative,
+      // so the published App Store build (no bridge) never shows a dead button.
+      // The bridge may be injected slightly after load, so retry briefly.
+      if (locateBtn && locateBtn.style.display === 'none') {
+        var revealTries = 0;
+        (function revealWhenReady() {
+          if (window.TempestNative && typeof window.TempestNative.requestLocation === 'function') {
+            locateBtn.style.display = '';
+          } else if (revealTries++ < 20) {
+            setTimeout(revealWhenReady, 150);
+          }
+        })();
       }
 
       if (locateBtn && latInput && lonInput) {

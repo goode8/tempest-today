@@ -351,6 +351,68 @@ def convert_temperature(temp, from_unit='F', to_unit='F'):
     return temp
 
 
+def _coerce_temp(value):
+    """Return a float temperature or None for missing/'N/A'/bool values."""
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+# Typical lag between solar noon and the day's temperature peak.
+_THERMAL_PEAK_LAG = timedelta(hours=3)
+
+
+def flag_stale_current_high(forecasts, current_weather):
+    """
+    Mark the current (first) daytime period's high as stale so the detail view
+    can omit a misleading number that already peaked earlier today.
+
+    The high is considered "in the past" only when BOTH hold:
+      • it's past the day's thermal peak (~3h after solar noon), and
+      • the observed temperature is already below that forecast high.
+    The time gate is what prevents hiding a morning high we're still climbing to.
+
+    Night lows are never flagged: an overnight low sits at the END of its period
+    (around dawn), so it's still ahead for the whole evening.
+
+    Sets forecasts[0]['hide_temp'] to True/False in place. Requires
+    current_weather to carry the observed 'temp' plus 'sunrise_dt'/'sunset_dt'
+    (astronomy is merged into current_weather before rendering). Any missing
+    piece leaves the high visible.
+    """
+    if not forecasts:
+        return
+    period = forecasts[0]
+    period['hide_temp'] = False
+
+    if not period.get('isDaytime'):
+        return
+    high = _coerce_temp(period.get('temperature'))
+    current = _coerce_temp((current_weather or {}).get('temp'))
+    if high is None or current is None:
+        return
+
+    sunrise = current_weather.get('sunrise_dt')
+    sunset = current_weather.get('sunset_dt')
+    if not sunrise or not sunset:
+        return
+
+    try:
+        solar_noon = sunrise + (sunset - sunrise) / 2
+        peak_time = solar_noon + _THERMAL_PEAK_LAG
+        now = datetime.now(sunrise.tzinfo)
+    except (TypeError, AttributeError):
+        return
+
+    if now > peak_time and current < high:
+        period['hide_temp'] = True
+
+
 def convert_wind_speed(raw_value, unit_code):
     """
     Convert wind speed from various units to MPH

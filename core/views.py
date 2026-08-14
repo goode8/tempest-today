@@ -13,6 +13,7 @@ from .utils import (
     degrees_to_cardinal,
     get_astronomy_data,
     convert_temperature,
+    flag_stale_current_high,
     _normalize_query,
     _resolve_region_to_capital,
     _REGION_CAPITALS,
@@ -247,6 +248,9 @@ def index(request):
         # Unit is always determined by country, not form state
         unit = 'C' if cached_is_canada else 'F'
 
+        # Recompute each request — depends on the current time, not cached state
+        flag_stale_current_high(forecasts, current_weather)
+
         return render(
             request,
             "core/index.html",
@@ -346,6 +350,8 @@ def index(request):
             'is_canada': True,
             'uv': uv_data,
         }, 600)
+
+        flag_stale_current_high(forecasts, current_weather)
 
         return render(
             request,
@@ -487,6 +493,8 @@ def index(request):
                 current_weather[key] = convert_temperature(
                     current_weather[key], from_unit='F', to_unit='C'
                 )
+
+    flag_stale_current_high(forecasts, current_weather)
 
     return render(
         request,

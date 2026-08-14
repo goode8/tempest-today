@@ -38,6 +38,44 @@ _US_STATE_ABBREVS = frozenset({
 })
 
 
+# Plausible surface-air temperature range in Fahrenheit. NWS occasionally emits a
+# corrupt grid value for a single forecast period (e.g. a low of -100°F alongside
+# machine-generated prose like "Low around -100"). Anything outside this range is
+# treated as missing rather than shown. Bounds sit just past real-world extremes
+# (Antarctic/interior-Alaska lows, Death Valley's 134°F record) to avoid ever
+# dropping a legitimate reading.
+_PLAUSIBLE_TEMP_F = (-70, 140)
+
+
+def _sanitize_forecast_periods(periods):
+    """
+    Drop implausible NWS temperatures (bad grid values) so they don't surface as
+    absurd highs/lows, and strip any prose sentence that quotes the bad number.
+    Mutates and returns the list of period dicts.
+    """
+    lo, hi = _PLAUSIBLE_TEMP_F
+    for period in periods:
+        temp = period.get("temperature")
+        if not isinstance(temp, (int, float)) or isinstance(temp, bool):
+            continue
+        if lo <= temp <= hi:
+            continue
+
+        # Corrupt value: blank the number and remove any sentence that cites it,
+        # since the machine-generated prose is derived from the same bad grid.
+        period["temperature"] = None
+        token = str(int(temp))
+        pattern = re.compile(r'(?<![\d-])' + re.escape(token) + r'(?!\d)')
+        for key in ("shortForecast", "detailedForecast"):
+            text = period.get(key)
+            if not text or token not in text:
+                continue
+            kept = [s for s in re.split(r'(?<=[.!?])\s+', text)
+                    if not pattern.search(s)]
+            period[key] = ' '.join(kept).strip()
+    return periods
+
+
 # WeatherAPI free tier: 1 000 000 calls/month.  We budget 1/31 of that per day
 # so a single busy day can't silently exhaust the monthly allowance.
 _UV_DAILY_LIMIT = 1_000_000 // 31  # ≈ 32 258
@@ -453,7 +491,8 @@ class WeatherService:
         response = requests.get(forecast_url, headers=self.headers)
         data = response.json()
 
-        return data.get("properties", {}).get("periods", [])
+        periods = data.get("properties", {}).get("periods", [])
+        return _sanitize_forecast_periods(periods)
 
     def get_nearest_station(self, stations_url):
         """
@@ -713,7 +752,7 @@ class WeatherService:
                     'url': url,
                 })
 
-        return forecasts, current_weather, active_alerts
+        return _sanitize_forecast_periods(forecasts), current_weather, active_alerts
 
     # ── Air Quality ────────────────────────────────────────────────────────────
 

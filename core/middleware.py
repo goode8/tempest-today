@@ -46,4 +46,11 @@ class ClientPlatformMiddleware:
             request.client_platform = "ios"
         else:
             request.client_platform = "web"
+
+        # Render the "use my location" pin for both native platforms, but on iOS
+        # it starts hidden and JS only reveals it when the native location bridge
+        # (window.TempestNative) is present — i.e. the working TestFlight build.
+        # The published App Store build has no bridge, so testers see a working
+        # button while regular users never see a dead one.
+        request.show_locate = request.client_platform in ("android", "ios")
         return self.get_response(request)
