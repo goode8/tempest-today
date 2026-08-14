@@ -887,7 +887,7 @@
           <button type="button" class="input-clear" id="clearBtn" aria-label="Clear">✕</button>
         </div>
         {% if request.show_locate %}
-        <button type="button" class="locate-btn" id="locateBtn" aria-label="Use my location" title="Use my location"{% if request.client_platform == "ios" %} style="display: none;"{% endif %}>
+        <button type="button" class="locate-btn" id="locateBtn" aria-label="Use my location" title="Use my location">
           <span class="locate-icon">📍</span>
           <span class="locate-spinner"></span>
         </button>
@@ -3144,21 +3144,6 @@
           latInput.value = '';
           lonInput.value = '';
         });
-      }
-
-      // The locate button is hidden on iOS until we confirm the native location
-      // bridge exists. Only the working app build injects window.TempestNative,
-      // so the published App Store build (no bridge) never shows a dead button.
-      // The bridge may be injected slightly after load, so retry briefly.
-      if (locateBtn && locateBtn.style.display === 'none') {
-        var revealTries = 0;
-        (function revealWhenReady() {
-          if (window.TempestNative && typeof window.TempestNative.requestLocation === 'function') {
-            locateBtn.style.display = '';
-          } else if (revealTries++ < 20) {
-            setTimeout(revealWhenReady, 150);
-          }
-        })();
       }
 
       if (locateBtn && latInput && lonInput) {
