@@ -38,6 +38,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.apple",
     "core",
 ]
 
@@ -48,9 +54,15 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.ClientPlatformMiddleware",
+]
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
 ROOT_URLCONF = "mysite.urls"
@@ -133,14 +145,15 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Security settings
-SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True') == 'True'
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-PREPEND_WWW = True
-SESSION_COOKIE_SECURE = os.environ.get('DJANGO_COOKIE_SECURE', 'True') == 'True'
-CSRF_COOKIE_SECURE = os.environ.get('DJANGO_COOKIE_SECURE', 'True') == 'True'
-SECURE_HSTS_SECONDS = 31536000  # 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+# SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True') == 'True'
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Add "www." in production only; keeps local/LAN IP testing (e.g. phone on Wi-Fi) working.
+PREPEND_WWW = not DEBUG
+# SESSION_COOKIE_SECURE = os.environ.get('DJANGO_COOKIE_SECURE', 'True') == 'True'
+# CSRF_COOKIE_SECURE = os.environ.get('DJANGO_COOKIE_SECURE', 'True') == 'True'
+# SECURE_HSTS_SECONDS = 31536000  # 1 year
+# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+# SECURE_HSTS_PRELOAD = True
 
 # Make CSRF token last longer (default is session length)
 CSRF_COOKIE_AGE = 31449600  # 1 year in seconds
@@ -161,3 +174,99 @@ CACHES = {
 
 LOCATIONIQ_API_KEY = os.getenv('LOCATIONIQ_API_KEY')
 AIRNOW_API_KEY = os.getenv('AIRNOW_API_KEY')
+
+# ---------------------------------------------------------------------------
+# Accounts (django-allauth) — accounts are only ever created on demand, the
+# first time a free user tries to unlock a premium feature. Nothing here
+# creates or requires an account for ordinary anonymous browsing.
+# ---------------------------------------------------------------------------
+SITE_ID = 1
+
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*"]
+# Email ownership is already proven by our own magic link, and by Google/Apple
+# themselves for social logins — no separate verification email needed.
+ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_RATE_LIMITS = {
+    # Applies to allauth's own views; our hand-rolled magic-link endpoints
+    # rate-limit separately (see core/views_auth.py).
+    "login_failed": "10/m/ip,20/5m/ip",
+}
+
+# Skip the "you're about to sign in with Google" intermediate page — the
+# WebView is already inside our own app chrome, no need for a confirm step.
+SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True  # link social login to an existing account by verified email
+SOCIALACCOUNT_STORE_TOKENS = False
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        "APPS": [
+            {
+                "client_id": os.environ.get("GOOGLE_OAUTH_CLIENT_ID", ""),
+                "secret": os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", ""),
+                "key": "",
+            },
+        ],
+    },
+    "apple": {
+        "APPS": [
+            {
+                # "Services ID" identifier, e.g. today.tempest.web-signin
+                "client_id": os.environ.get("APPLE_OAUTH_CLIENT_ID", ""),
+                # NOTE: allauth's field names for Apple are non-obvious —
+                # "secret" holds the Sign-in-with-Apple Key ID, and "key"
+                # holds your Apple Developer Team ID. Neither is a secret
+                # you're given by Apple; allauth builds the actual JWT
+                # client secret itself from these plus the private key
+                # below, refreshed automatically.
+                "secret": os.environ.get("APPLE_OAUTH_KEY_ID", ""),
+                "key": os.environ.get("APPLE_TEAM_ID", ""),
+                "settings": {
+                    "certificate_key": os.environ.get("APPLE_OAUTH_PRIVATE_KEY", "").replace("\\n", "\n"),
+                },
+            },
+        ],
+    },
+}
+
+# Where to send the browser after a successful login (social or magic link)
+# when no explicit ?next= was given.
+LOGIN_REDIRECT_URL = "/"
+
+# ---------------------------------------------------------------------------
+# Outgoing email (magic links). Any standard SMTP provider works — see the
+# setup notes for recommended options.
+# ---------------------------------------------------------------------------
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Tempest Today <noreply@tempest.today>")
+
+# Base URL used to build the magic-link email (no trailing slash), e.g.
+# "https://www.tempest.today". Falls back to DEBUG-friendly localhost.
+SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "http://localhost:8000")
+
+# ---------------------------------------------------------------------------
+# In-app purchase verification (Apple App Store / Google Play)
+# ---------------------------------------------------------------------------
+APPLE_BUNDLE_ID = os.environ.get("APPLE_BUNDLE_ID", "")
+APPLE_APP_APPLE_ID = os.environ.get("APPLE_APP_APPLE_ID")  # numeric App Store Connect app ID
+APPLE_APP_APPLE_ID = int(APPLE_APP_APPLE_ID) if APPLE_APP_APPLE_ID else None
+APPLE_IAP_ENVIRONMENT = os.environ.get("APPLE_IAP_ENVIRONMENT", "Production")  # or "Sandbox"
+# Directory of Apple's public root CA .cer files (download once, see setup notes).
+APPLE_ROOT_CERTS_DIR = os.environ.get("APPLE_ROOT_CERTS_DIR", str(BASE_DIR / "apple_root_certs"))
+
+GOOGLE_PLAY_PACKAGE_NAME = os.environ.get("GOOGLE_PLAY_PACKAGE_NAME", "")
+# Path to the Google Cloud service account JSON with Play Console API access.
+GOOGLE_PLAY_SERVICE_ACCOUNT_PATH = os.environ.get("GOOGLE_PLAY_SERVICE_ACCOUNT_PATH", "")
+# Expected audience/service-account-email for verifying Pub/Sub push OIDC tokens.
+GOOGLE_PUBSUB_AUDIENCE = os.environ.get("GOOGLE_PUBSUB_AUDIENCE", "")
+GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL = os.environ.get("GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL", "")
