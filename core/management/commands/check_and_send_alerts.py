@@ -126,7 +126,15 @@ class Command(BaseCommand):
             return
 
         ws = WeatherService()
-        devices = DeviceToken.objects.all()
+        # Only push to devices whose owner currently has an active
+        # subscription — catches lapsed/refunded subscribers even though
+        # their token was registered while premium was active, and skips
+        # legacy tokens registered before premium-gating existed (user is
+        # NULL for those).
+        devices = DeviceToken.objects.filter(
+            user__subscription__has_premium=True,
+            user__subscription__expires_at__gt=timezone.now(),
+        )
         total = devices.count()
 
         if total == 0:

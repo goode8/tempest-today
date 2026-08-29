@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .models import SearchLog, DeviceToken
+from .decorators import premium_required
 from .weather_service import WeatherService
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from .utils import (
@@ -48,10 +49,15 @@ def index(request):
 
         # "Use my location" submits raw GPS coordinates (app wrapper only)
         # instead of a typed address — these bypass forward geocoding below
-        # and get reverse-geocoded instead.
+        # and get reverse-geocoded instead. Premium-gated server-side: a
+        # non-premium request that sends lat/lon is silently treated as if
+        # it hadn't, rather than rejected outright, since this is a page
+        # render rather than a JSON API.
         raw_lat = request.POST.get("lat", "").strip()
         raw_lon = request.POST.get("lon", "").strip()
-        if raw_lat and raw_lon:
+        subscription = getattr(request.user, 'subscription', None) if request.user.is_authenticated else None
+        has_premium = bool(subscription and subscription.is_active())
+        if raw_lat and raw_lon and has_premium:
             try:
                 candidate_lat, candidate_lon = float(raw_lat), float(raw_lon)
                 if -90 <= candidate_lat <= 90 and -180 <= candidate_lon <= 180:
@@ -940,10 +946,13 @@ def compact_forecast(request):
     return HttpResponse(html)
 
 
-@csrf_exempt
 @require_POST
+@premium_required
 def register_push(request):
-    """Store an FCM device token and the user's current favorite cities."""
+    """Store an FCM device token and the user's current favorite cities.
+    Premium-gated: only a logged-in user with an active subscription may
+    register a token, and the token is tied to that account so it can be
+    dropped again automatically if the subscription lapses."""
     import json as _json
     try:
         body = _json.loads(request.body)
@@ -959,6 +968,7 @@ def register_push(request):
     DeviceToken.objects.update_or_create(
         token=token,
         defaults={
+            'user': request.user,
             'platform': platform,
             'city_1': cities[0] if len(cities) > 0 else '',
             'city_2': cities[1] if len(cities) > 1 else '',
@@ -968,8 +978,8 @@ def register_push(request):
     return JsonResponse({'ok': True})
 
 
-@csrf_exempt
 @require_POST
+@premium_required
 def update_push_cities(request):
     """Update the saved cities for an existing FCM device token."""
     import json as _json
@@ -983,7 +993,7 @@ def update_push_cities(request):
     if not token:
         return JsonResponse({'ok': False, 'error': 'missing token'}, status=400)
 
-    updated = DeviceToken.objects.filter(token=token).update(
+    updated = DeviceToken.objects.filter(token=token, user=request.user).update(
         city_1=cities[0] if len(cities) > 0 else '',
         city_2=cities[1] if len(cities) > 1 else '',
         city_3=cities[2] if len(cities) > 2 else '',

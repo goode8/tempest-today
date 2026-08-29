@@ -6,3 +6,9 @@ astral==3.2
 timezonefinder==5.2.0
 pytz==2024.2
 python-dotenv==1.0.1
+
+# Accounts + subscription gating
+django-allauth==65.19.1
+app-store-server-library==3.1.2
+google-auth==2.57.0
+google-api-python-client==2.199.0
